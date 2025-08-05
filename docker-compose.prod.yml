@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: easyholmes-backend-prod
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_TOKEN=${API_TOKEN}
+    volumes:
+      - sqlite_data:/app/database
+    networks:
+      - easyholmes-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production-stage
+    container_name: easyholmes-frontend-prod
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    networks:
+      - easyholmes-network
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+
+networks:
+  easyholmes-network:
+    driver: bridge 
