@@ -78,10 +78,11 @@ export const useProcessesStore = defineStore('processes', {
       this.error = null;
 
       try {
-        const response = await taskService.getAllTasks(params);
+        // Buscar todas as tarefas sem paginação para garantir que todas sejam carregadas
+        const response = await taskService.getAllTasks({ ...params, limit: 1000, offset: 0 });
         
         if (response.success) {
-          this.tasks = response.data.tasks || [];
+          this.tasks = response.data.tasks || response.data || [];
           this.updateStats();
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';

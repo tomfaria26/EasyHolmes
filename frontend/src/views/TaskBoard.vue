@@ -215,51 +215,129 @@
 
         <!-- Coluna: Concluído -->
         <div class="bg-gray-50 rounded-lg p-4">
-          <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-            Concluído
-                         <span class="ml-auto bg-green-200 text-green-700 px-2 py-1 rounded-full text-sm">
-               {{ filteredTasks.filter(t => t.status === 'completed').length }}
-             </span>
-          </h3>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+              <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+              Concluído
+              <span class="ml-2 bg-green-200 text-green-700 px-2 py-1 rounded-full text-sm">
+                {{ filteredTasks.filter(t => t.status === 'completed').length }}
+              </span>
+            </h3>
+                         <div class="flex space-x-2" v-if="Object.keys(groupedCompletedTasks).length > 0">
+               <button
+                 @click="expandAllGroups"
+                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                 title="Expandir todos os grupos"
+               >
+                 <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                 </svg>
+                 Expandir
+               </button>
+               <button
+                 @click="collapseAllGroups"
+                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                 title="Recolher todos os grupos"
+               >
+                 <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                 </svg>
+                 Recolher
+               </button>
+             </div>
+          </div>
 
-                     <div class="space-y-3 min-h-[200px]">
-             <div
-               v-for="task in filteredTasks.filter(t => t.status === 'completed')"
-               :key="task.id"
-               class="bg-white rounded-lg p-4 shadow-sm border border-green-200 cursor-pointer hover:shadow-md transition-shadow"
-               @click="openTaskDetails(task)"
+          <div class="space-y-4 min-h-[200px]">
+            <!-- Grupos de processos -->
+                         <div
+               v-for="(processGroup, processIdentifier) in groupedCompletedTasks"
+               :key="processIdentifier"
+               class="bg-white rounded-lg border border-gray-200 overflow-hidden"
              >
-              <div class="flex justify-between items-start mb-2">
-                <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
-                <button
-                  @click.stop="updateTaskStatus(task.id, 'in-progress')"
-                  :disabled="updatingTasks.includes(task.id)"
-                  class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Mover para Em Andamento"
+               <!-- Header do grupo -->
+               <div
+                 class="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                 @click="toggleProcessGroup(processIdentifier)"
+               >
+                 <div class="flex items-center space-x-2">
+                   <svg
+                     :class="[
+                       'w-4 h-4 text-gray-600 transition-transform duration-200',
+                       expandedGroups.includes(processIdentifier) ? 'rotate-90' : ''
+                     ]"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24"
+                   >
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                   </svg>
+                   <div>
+                     <h4 class="font-medium text-gray-800 text-sm">{{ processIdentifier || 'Processo não identificado' }}</h4>
+                     <p class="text-xs text-gray-600">{{ processGroup.length }} tarefa{{ processGroup.length !== 1 ? 's' : '' }} concluída{{ processGroup.length !== 1 ? 's' : '' }}</p>
+                   </div>
+                 </div>
+                 <div class="flex items-center space-x-2">
+                   <span class="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded-full">
+                     {{ processGroup.length }}
+                   </span>
+                 </div>
+               </div>
+
+                             <!-- Conteúdo do grupo (dropdown) -->
+               <div
+                 v-show="expandedGroups.includes(processIdentifier)"
+                 class="divide-y divide-gray-100"
+               >
+                <div
+                  v-for="task in processGroup"
+                  :key="task.id"
+                  class="p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                  @click="openTaskDetails(task)"
                 >
-                  <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span v-else>←</span>
-                </button>
+                  <div class="flex justify-between items-start mb-2">
+                    <h5 class="font-medium text-gray-900 text-sm flex-1 mr-2">{{ task.name || 'Tarefa sem nome' }}</h5>
+                    <button
+                      @click.stop="updateTaskStatus(task.id, 'in-progress')"
+                      :disabled="updatingTasks.includes(task.id)"
+                      class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      title="Mover para Em Andamento"
+                    >
+                      <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span v-else class="flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Voltar
+                      </span>
+                    </button>
+                  </div>
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-500 flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Criada: {{ formatDate(task.created_at, false) }}
+                    </span>
+                    <span v-if="task.completion_date" class="text-green-600 font-medium flex items-center">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Concluída: {{ formatDate(task.completion_date, false) }}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-500 flex items-center">
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  Criada: {{ formatDate(task.created_at, false) }}
-                </span>
-                <span v-if="task.completion_date" class="text-xs flex items-center text-green-600 font-medium">
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  Concluída: {{ formatDate(task.completion_date, false) }}
-                </span>
-              </div>
+            </div>
+
+            <!-- Estado vazio para tarefas concluídas -->
+            <div v-if="Object.keys(groupedCompletedTasks).length === 0" class="text-center py-8">
+              <svg class="h-12 w-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p class="text-sm text-gray-500">Nenhuma tarefa concluída</p>
             </div>
           </div>
         </div>
@@ -291,6 +369,9 @@ export default {
     // Loading states
     const updatingTasks = ref([])
     const filteringTasks = ref(false)
+    
+    // Estado dos grupos expandidos
+    const expandedGroups = ref([])
 
     const loading = computed(() => processesStore.loading)
     const error = computed(() => processesStore.error)
@@ -342,7 +423,7 @@ export default {
       return Array.from(fases).sort()
     })
 
-    // Gerar todas as sugestões disponíveis
+             // Gerar todas as sugestões disponíveis
     const allSuggestions = computed(() => {
       const suggestions = []
       
@@ -415,37 +496,77 @@ export default {
       })
     })
 
-         // Filtrar tarefas baseado nas tags ativas
-     const filteredTasks = computed(() => {
-       let filtered = tasks.value
-       
-                       activeTags.value.forEach(tag => {
-          switch (tag.filterType) {
-            case 'process':
-              filtered = filtered.filter(task => task.processId === tag.value)
-              break
-            case 'obra':
-              filtered = filtered.filter(task => {
-                const { obra } = extractProcessComponents(task.processIdentifier)
-                return obra === tag.value
-              })
-              break
-            case 'disciplina':
-              filtered = filtered.filter(task => {
-                const { disciplina } = extractProcessComponents(task.processIdentifier)
-                return disciplina === tag.value
-              })
-              break
-            case 'fase':
-              filtered = filtered.filter(task => {
-                const { fase } = extractProcessComponents(task.processIdentifier)
-                return fase === tag.value
-              })
-              break
-          }
+                                                                                                                                                               // Filtrar tarefas baseado nas tags ativas
+    const filteredTasks = computed(() => {
+      let filtered = tasks.value
+      
+      activeTags.value.forEach(tag => {
+        switch (tag.filterType) {
+          case 'process':
+            // Filtrar por processo específico - comparar tanto processId quanto processIdentifier
+            filtered = filtered.filter(task => {
+              const matchesById = task.processId === tag.value
+              const matchesByIdentifier = task.processIdentifier === tag.label
+              return matchesById || matchesByIdentifier
+            })
+            break
+          case 'obra':
+            filtered = filtered.filter(task => {
+              const { obra } = extractProcessComponents(task.processIdentifier)
+              return obra === tag.value
+            })
+            break
+          case 'disciplina':
+            filtered = filtered.filter(task => {
+              const { disciplina } = extractProcessComponents(task.processIdentifier)
+              return disciplina === tag.value
+            })
+            break
+          case 'fase':
+            filtered = filtered.filter(task => {
+              const { fase } = extractProcessComponents(task.processIdentifier)
+              return fase === tag.value
+            })
+            break
+        }
+      })
+      
+      return filtered
+    })
+
+          // Agrupar tarefas concluídas por processo
+    const groupedCompletedTasks = computed(() => {
+      const completedTasks = filteredTasks.value.filter(task => task.status === 'completed')
+      
+      const grouped = {}
+      
+      completedTasks.forEach(task => {
+        const processIdentifier = task.processIdentifier || 'Processo não identificado'
+        if (!grouped[processIdentifier]) {
+          grouped[processIdentifier] = []
+        }
+        grouped[processIdentifier].push(task)
+      })
+      
+      // Ordenar tarefas dentro de cada grupo por data de conclusão (mais recente primeiro)
+      Object.keys(grouped).forEach(processIdentifier => {
+        grouped[processIdentifier].sort((a, b) => {
+          const dateA = new Date(a.completion_date || 0)
+          const dateB = new Date(b.completion_date || 0)
+          return dateB - dateA
         })
-       return filtered
-     })
+      })
+      
+      // Ordenar grupos por número de tarefas (mais tarefas primeiro)
+      const sortedGroups = {}
+      Object.keys(grouped)
+        .sort((a, b) => grouped[b].length - grouped[a].length)
+        .forEach(processIdentifier => {
+          sortedGroups[processIdentifier] = grouped[processIdentifier]
+        })
+      
+      return sortedGroups
+    })
 
     const refreshData = async () => {
       await processesStore.initializeData()
@@ -506,6 +627,26 @@ export default {
       activeTags.value = []
       searchQuery.value = ''
       processesStore.fetchTasks()
+    }
+
+    // Função para alternar expansão de grupos
+    const toggleProcessGroup = (processIdentifier) => {
+      const index = expandedGroups.value.indexOf(processIdentifier)
+      if (index > -1) {
+        expandedGroups.value.splice(index, 1)
+      } else {
+        expandedGroups.value.push(processIdentifier)
+      }
+    }
+
+    // Expandir todos os grupos
+    const expandAllGroups = () => {
+      expandedGroups.value = Object.keys(groupedCompletedTasks.value)
+    }
+
+    // Recolher todos os grupos
+    const collapseAllGroups = () => {
+      expandedGroups.value = []
     }
 
     const updateTaskStatus = async (taskId, newStatus) => {
@@ -624,6 +765,8 @@ export default {
       filteredSuggestions,
       updatingTasks,
       filteringTasks,
+      expandedGroups,
+      groupedCompletedTasks,
       refreshData,
       filterByProcess,
       addTag,
@@ -634,6 +777,9 @@ export default {
       clearSearch,
       handleBlur,
       clearFilters,
+      toggleProcessGroup,
+      expandAllGroups,
+      collapseAllGroups,
       updateTaskStatus,
       openTaskDetails,
       getProcessName,

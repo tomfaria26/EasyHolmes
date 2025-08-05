@@ -11,6 +11,16 @@ class ProcessController {
   async getProcesses(req, res) {
     try {
       const processes = await holmesService.getProcesses();
+      const processesList = processes.processes || processes || [];
+      
+      // Log específico para verificar se o processo R70-HIN-PR está sendo retornado
+      const r70HinPrProcess = processesList.find(p => p.identifier === 'Auditoria BIM-R70-HIN-PR');
+      console.log('Processo R70-HIN-PR encontrado na API:', r70HinPrProcess ? {
+        id: r70HinPrProcess.id,
+        name: r70HinPrProcess.name,
+        identifier: r70HinPrProcess.identifier,
+        status: r70HinPrProcess.status
+      } : 'NÃO ENCONTRADO');
       
       res.json({
         success: true,

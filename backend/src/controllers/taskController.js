@@ -9,11 +9,27 @@ async function getAllTasksFromAllProcesses() {
     const processesResponse = await holmesService.getProcesses();
     const processes = processesResponse.processes || processesResponse || [];
     
-    // Filtrar apenas processos "Auditoria BIM" (incluindo closed, excluindo canceled)
-    const filteredProcesses = processes.filter(process => 
-      process.name === 'Auditoria BIM' && 
-      process.status !== 'canceled'
-    );
+         // Log de todos os processos encontrados
+     console.log('Todos os processos encontrados na API Holmes:', processes.map(p => ({
+       id: p.id,
+       name: p.name,
+       identifier: p.identifier,
+       status: p.status
+     })));
+     
+     // Filtrar apenas processos "Auditoria BIM" (incluindo closed, excluindo canceled)
+     const filteredProcesses = processes.filter(process => 
+       process.name === 'Auditoria BIM' && 
+       process.status !== 'canceled'
+     );
+     
+     // Log dos processos filtrados
+     console.log('Processos filtrados (Auditoria BIM, não cancelados):', filteredProcesses.map(p => ({
+       id: p.id,
+       name: p.name,
+       identifier: p.identifier,
+       status: p.status
+     })));
 
     const processIdMap = {};
     const allTasks = {};
@@ -37,6 +53,7 @@ async function getAllTasksFromAllProcesses() {
         const historyResponse = await holmesService.getProcessHistory(processId, historyPayload);
         if (!historyResponse || !historyResponse.histories) continue;
         
+        let taskCount = 0;
         for (const hist of historyResponse.histories) {
           const props = hist.properties || {};
           const taskId = props.task_id;
@@ -51,8 +68,13 @@ async function getAllTasksFromAllProcesses() {
                 task_id: taskId,
                 created_at: hist.created_at || ''
               };
+              taskCount++;
             }
           }
+        }
+        // Log detalhado para cada processo
+        if (processId === '6859b7320b52b4fa33e50298' || processIdentifier === 'Auditoria BIM-R70-HIN-PR') {
+          console.log(`[DEBUG] Processo ${processIdentifier} (${processId}) - Tarefas carregadas: ${taskCount}`);
         }
       } catch (error) {
         console.warn(`Erro ao buscar histórico do processo ${processId}:`, error.message);
@@ -221,6 +243,18 @@ class TaskController {
 
       // Aplicar paginação
       const paginatedTasks = allTasks.slice(offset, offset + limit);
+      
+      // Debug: verificar tarefas do processo R70-HIN-PR
+      const r70HinPrTasks = allTasks.filter(task => task.processIdentifier === 'Auditoria BIM-R70-HIN-PR');
+      console.log(`[DEBUG] Tarefas do processo R70-HIN-PR encontradas: ${r70HinPrTasks.length}`);
+      if (r70HinPrTasks.length > 0) {
+        console.log('[DEBUG] Primeiras tarefas R70-HIN-PR:', r70HinPrTasks.slice(0, 3).map(t => ({
+          id: t.id,
+          processIdentifier: t.processIdentifier,
+          name: t.name,
+          status: t.status
+        })));
+      }
       
       res.json({
         success: true,
