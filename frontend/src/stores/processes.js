@@ -9,6 +9,13 @@ export const useProcessesStore = defineStore('processes', {
     selectedProcess: null,
     loading: false,
     error: null,
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      itemsPerPage: 20,
+      hasMore: false
+    },
     stats: {
       activeProcesses: 0,
       pendingTasks: 0,
@@ -72,18 +79,36 @@ export const useProcessesStore = defineStore('processes', {
     },
 
     /**
-     * Buscar tarefas
+     * Buscar tarefas com paginação
      */
     async fetchTasks(params = {}) {
       this.loading = true;
       this.error = null;
 
       try {
-        // Buscar todas as tarefas sem paginação para garantir que todas sejam carregadas
-        const response = await taskService.getAllTasks({ ...params, limit: 1000, offset: 0 });
+        const { page = 1, limit = 20, status, processId } = params;
+        const offset = (page - 1) * limit;
+        
+        const response = await taskService.getAllTasks({ 
+          limit, 
+          offset, 
+          page,
+          status,
+          processId
+        });
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
+          
+          // Atualizar informações de paginação
+          this.pagination = {
+            currentPage: page,
+            totalPages: Math.ceil(response.data.total / limit),
+            totalItems: response.data.total,
+            itemsPerPage: limit,
+            hasMore: response.data.hasMore || false
+          };
+          
           this.updateStats();
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
@@ -94,6 +119,31 @@ export const useProcessesStore = defineStore('processes', {
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Carregar próxima página de tarefas
+     */
+    async loadNextPage() {
+      if (!this.pagination.hasMore || this.loading) return;
+      
+      const nextPage = this.pagination.currentPage + 1;
+      await this.fetchTasks({ 
+        page: nextPage, 
+        limit: this.pagination.itemsPerPage 
+      });
+    },
+
+    /**
+     * Carregar página específica de tarefas
+     */
+    async loadPage(page) {
+      if (page < 1 || page > this.pagination.totalPages) return;
+      
+      await this.fetchTasks({ 
+        page, 
+        limit: this.pagination.itemsPerPage 
+      });
     },
 
     /**
@@ -250,11 +300,26 @@ export const useProcessesStore = defineStore('processes', {
      */
     async fetchTasksInternal(params = {}) {
       try {
-        // Buscar todas as tarefas sem paginação para garantir que todas sejam carregadas
-        const response = await taskService.getAllTasks({ ...params, limit: 1000, offset: 0 });
+        const { page = 1, limit = 20 } = params;
+        const offset = (page - 1) * limit;
+        
+        const response = await taskService.getAllTasks({ 
+          limit, 
+          offset, 
+          page
+        });
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
+          
+          // Atualizar informações de paginação
+          this.pagination = {
+            currentPage: page,
+            totalPages: Math.ceil(response.data.total / limit),
+            totalItems: response.data.total,
+            itemsPerPage: limit,
+            hasMore: response.data.hasMore || false
+          };
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
         }
