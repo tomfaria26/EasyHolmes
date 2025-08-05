@@ -413,11 +413,11 @@
           </div>
 
           <!-- Propriedades da Tarefa -->
-          <div v-if="selectedTask?.status !== 'completed' && taskProperties.length > 0" class="mt-6">
+          <div v-if="selectedTask?.status !== 'completed' && taskProperties.filter(p => !p.hidden).length > 0" class="mt-6">
             <h4 class="text-lg font-medium text-gray-900 mb-4">Propriedades da Tarefa</h4>
             <div class="space-y-4">
               <div
-                v-for="property in taskProperties"
+                v-for="property in taskProperties.filter(p => !p.hidden)"
                 :key="property.id"
                 class="space-y-2"
               >
@@ -425,35 +425,56 @@
                   {{ property.name }}
                   <span v-if="property.required" class="text-red-500">*</span>
                 </label>
-                
-                <!-- Campo de seleção para propriedades com opções -->
-                <select
-                  v-if="property.options && property.options.length > 0"
-                  :id="property.id"
-                  v-model="selectedPropertyValues[property.id]"
-                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  :required="property.required"
-                >
-                  <option value="">Selecione uma opção</option>
-                  <option
-                    v-for="option in property.options"
-                    :key="option.id"
-                    :value="option.id"
+                <!-- Propriedade somente leitura -->
+                <template v-if="property.read_only === true">
+                  <span 
+                    class="inline-block w-full bg-gray-100 px-3 py-2 rounded-md text-gray-600 border border-gray-300 cursor-not-allowed select-none pointer-events-none user-select-none"
+                    style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; pointer-events: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"
+                    @click.prevent
+                    @keydown.prevent
+                    @input.prevent
+                    @focus.prevent
+                    @blur.prevent
+                    @mousedown.prevent
+                    @mouseup.prevent
+                    @touchstart.prevent
+                    @touchend.prevent
+                    tabindex="-1"
+                    contenteditable="false"
+                    unselectable="on"
                   >
-                    {{ option.name }}
-                  </option>
-                </select>
-                
-                <!-- Campo de texto para propriedades sem opções -->
-                <input
-                  v-else
-                  :id="property.id"
-                  v-model="selectedPropertyValues[property.id]"
-                  type="text"
-                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  :placeholder="`Digite o valor para ${property.name}`"
-                  :required="property.required"
-                />
+                    {{ property.value || '—' }}
+                  </span>
+                </template>
+                <!-- Dropdown -->
+                <template v-else-if="property.options && property.options.length > 0">
+                  <select
+                    :id="property.id"
+                    v-model="selectedPropertyValues[property.id]"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    :required="property.required"
+                  >
+                    <option value="">Selecione uma opção</option>
+                    <option
+                      v-for="option in property.options"
+                      :key="option.id"
+                      :value="option.id"
+                    >
+                      {{ option.name }}
+                    </option>
+                  </select>
+                </template>
+                <!-- Campo de texto -->
+                <template v-else>
+                  <input
+                    :id="property.id"
+                    v-model="selectedPropertyValues[property.id]"
+                    type="text"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    :placeholder="`Digite o valor para ${property.name}`"
+                    :required="property.required"
+                  />
+                </template>
               </div>
             </div>
           </div>
@@ -836,12 +857,31 @@ export default {
       // Limpar valores anteriores
       selectedPropertyValues.value = {}
       
+      // Garantir que propriedades read_only nunca sejam incluídas
+      // no selectedPropertyValues para evitar edição
+      
       // Buscar propriedades da tarefa se não estiver concluída
       if (task.status !== 'completed') {
         try {
           const response = await taskService.getTaskProperties(task.id)
           if (response.success) {
             taskProperties.value = response.data.properties || []
+            
+            // Preencher valores das propriedades que já têm valor (apenas as editáveis)
+            taskProperties.value.forEach(property => {
+              console.log(`[DEBUG] Propriedade: ${property.name}, read_only: ${property.read_only}, hidden: ${property.hidden}, value: ${property.value}`)
+              console.log(`[DEBUG] Tipo da propriedade read_only: ${typeof property.read_only}, hidden: ${typeof property.hidden}`)
+              console.log(`[DEBUG] Propriedade completa:`, property)
+              
+              if (property.value && !property.read_only) {
+                selectedPropertyValues.value[property.id] = property.value
+                console.log(`[DEBUG] Preenchendo ${property.name} com valor: ${property.value}`)
+              } else if (property.read_only) {
+                console.log(`[DEBUG] Propriedade ${property.name} é read_only, não preenchendo no selectedPropertyValues`)
+              }
+              // Para propriedades somente leitura, NÃO preencher no selectedPropertyValues
+              // para evitar que sejam editadas
+            })
           } else {
             console.error('Erro ao buscar propriedades:', response.error)
             taskProperties.value = []
@@ -865,10 +905,20 @@ export default {
 
 
     const completeTask = async () => {
-      if (!selectedTask.value) return
+      if (!selectedTask.value) {
+        console.error('selectedTask.value é null')
+        return
+      }
       
-      // Validar propriedades obrigatórias
-      const requiredProperties = taskProperties.value.filter(p => p.required)
+      const taskId = selectedTask.value.id
+      if (!taskId) {
+        console.error('selectedTask.value.id é null ou undefined')
+        return
+      }
+      
+      // Validar propriedades obrigatórias (apenas as visíveis e não hidden)
+      const visibleProperties = taskProperties.value.filter(p => !p.hidden)
+      const requiredProperties = visibleProperties.filter(p => p.required)
       const missingProperties = requiredProperties.filter(p => !selectedPropertyValues.value[p.id])
       
       if (missingProperties.length > 0) {
@@ -877,8 +927,9 @@ export default {
       }
       
       // Preparar valores das propriedades no formato esperado pela API
-      const propertyValues = taskProperties.value
-        .filter(p => selectedPropertyValues.value[p.id])
+      // Apenas incluir propriedades que não são read_only, não são hidden, e têm valor
+      const propertyValues = visibleProperties
+        .filter(p => !p.read_only && selectedPropertyValues.value[p.id])
         .map(p => {
           const selectedOption = p.options?.find(opt => opt.id === selectedPropertyValues.value[p.id])
           return {
@@ -888,11 +939,13 @@ export default {
           }
         })
       
+      console.log('[DEBUG] Enviando propertyValues:', propertyValues)
+      
       // Adicionar task ao loading state
-      updatingTasks.value.push(selectedTask.value.id)
+      updatingTasks.value.push(taskId)
       
       try {
-        const result = await taskService.completeTask(selectedTask.value.id, propertyValues)
+        const result = await taskService.completeTask(taskId, propertyValues)
         if (result.success) {
           // Atualizar dados após conclusão da tarefa
           await processesStore.fetchTasks()
@@ -904,12 +957,19 @@ export default {
           console.error('Erro ao concluir tarefa:', result.error)
           showError(`Erro ao concluir tarefa: ${result.error}`)
         }
-              } catch (error) {
-          console.error('Erro ao concluir tarefa:', error)
+      } catch (error) {
+        console.error('Erro ao concluir tarefa:', error)
+        
+        // Verificar se é um erro de permissão (403)
+        if (error.response && error.response.status === 403) {
+          const errorMessage = error.response.data?.message || error.response.data?.error || 'Erro de permissão'
+          showError(`❌ ${errorMessage}\n\n💡 Possível solução: Esta tarefa pode não estar atribuída ao seu usuário na plataforma HOLMES. Verifique se você tem permissão para concluir esta tarefa.`)
+        } else {
           showError('Erro ao concluir tarefa. Verifique o console para mais detalhes.')
-        } finally {
+        }
+      } finally {
         // Remover task do loading state
-        const index = updatingTasks.value.indexOf(selectedTask.value.id)
+        const index = updatingTasks.value.indexOf(taskId)
         if (index > -1) {
           updatingTasks.value.splice(index, 1)
         }

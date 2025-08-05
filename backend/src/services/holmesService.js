@@ -151,10 +151,35 @@ class HolmesService {
    */
   async getPropertyOptions(propertyTypeId) {
     try {
-      const response = await holmesClient.post(`/entities/${propertyTypeId}/instances/search`, {});
+      console.log(`[DEBUG] Buscando opções para propertyTypeId: ${propertyTypeId}`);
+      
+      // Payload baseado no exemplo do Python
+      const searchPayload = {
+        "query": {
+          "from": 0,
+          "size": 200,
+          "order": "asc",
+          "groups": [{
+            "match_all": true,
+            "terms": [{
+              "field": "entity_id",
+              "type": "is",
+              "value": propertyTypeId
+            }]
+          }],
+          "sort": "8547a640-504b-11f0-a2c8-75d9e0938171"
+        }
+      };
+      
+      const response = await holmesClient.post(`/entities/${propertyTypeId}/instances/search`, searchPayload);
+      console.log(`[DEBUG] Resposta da API para ${propertyTypeId}:`, JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error(`Erro ao buscar opções da propriedade ${propertyTypeId}:`, error.message);
+      if (error.response) {
+        console.error(`[DEBUG] Status code: ${error.response.status}`);
+        console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
+      }
       throw new Error('Falha ao buscar opções da propriedade');
     }
   }
@@ -186,6 +211,13 @@ class HolmesService {
         console.error(`[DEBUG] Status code: ${error.response.status}`);
         console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
         console.error(`[DEBUG] Response headers:`, JSON.stringify(error.response.headers, null, 2));
+        
+        // Tratar erros específicos da API do HOLMES
+        if (error.response.status === 412) {
+          if (error.response.data?.error === 'task_not_assigned_to_user') {
+            throw new Error('Esta tarefa não está atribuída ao seu usuário. Você não tem permissão para concluí-la.');
+          }
+        }
       }
       
       throw new Error('Falha ao executar ação da tarefa');

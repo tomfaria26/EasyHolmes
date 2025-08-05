@@ -253,10 +253,15 @@ class TaskController {
       // Buscar opções para cada propriedade que tem type
       const propertiesWithOptions = [];
       
+      console.log('[DEBUG] Propriedades da tarefa:', JSON.stringify(taskDetails.properties, null, 2));
+      
       for (const property of taskDetails.properties) {
-        if (property.type && property.required) {
+        console.log(`[DEBUG] Processando propriedade: ${property.id} - ${property.name} - type: ${property.type} - required: ${property.required}`);
+        
+        if (property.type) {
           try {
             const options = await holmesService.getPropertyOptions(property.type);
+            console.log(`[DEBUG] Opções encontradas para ${property.id}:`, JSON.stringify(options, null, 2));
             propertiesWithOptions.push({
               ...property,
               options: options.docs || []
@@ -275,6 +280,8 @@ class TaskController {
           });
         }
       }
+      
+      console.log('[DEBUG] Propriedades com opções:', JSON.stringify(propertiesWithOptions, null, 2));
 
       res.json({
         success: true,
@@ -333,10 +340,19 @@ class TaskController {
       });
     } catch (error) {
       console.error(`Erro ao concluir tarefa ${req.params.id}:`, error);
-      res.status(500).json({
-        error: 'Erro interno do servidor',
-        message: error.message
-      });
+      
+      // Verificar se é um erro de permissão
+      if (error.message.includes('não está atribuída ao seu usuário')) {
+        res.status(403).json({
+          error: 'Erro de permissão',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Erro interno do servidor',
+          message: error.message
+        });
+      }
     }
   }
 
