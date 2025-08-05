@@ -179,6 +179,24 @@ export const taskService = {
       status
     });
     return response.data;
+  },
+
+  /**
+   * Buscar propriedades de uma tarefa
+   */
+  async getTaskProperties(taskId) {
+    const response = await apiClient.get(`/api/tasks/${taskId}/properties`);
+    return response.data;
+  },
+
+  /**
+   * Concluir uma tarefa
+   */
+  async completeTask(taskId, propertyValues = []) {
+    const response = await apiClient.post(`/api/tasks/${taskId}/complete`, {
+      propertyValues
+    });
+    return response.data;
   }
 };
 

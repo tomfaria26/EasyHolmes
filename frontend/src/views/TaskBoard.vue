@@ -23,6 +23,9 @@
           <button class="btn btn-primary">
             Nova Tarefa
           </button>
+          
+
+
         </div>
       </div>
 
@@ -167,32 +170,6 @@
              >
               <div class="flex justify-between items-start mb-2">
                 <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
-                <div class="flex space-x-1">
-                  <button
-                    @click.stop="updateTaskStatus(task.id, 'pending')"
-                    :disabled="updatingTasks.includes(task.id)"
-                    class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Mover para Pendente"
-                  >
-                    <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span v-else>←</span>
-                  </button>
-                  <button
-                    @click.stop="updateTaskStatus(task.id, 'completed')"
-                    :disabled="updatingTasks.includes(task.id)"
-                    class="text-green-600 hover:text-green-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Marcar como Concluída"
-                  >
-                    <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span v-else>→</span>
-                  </button>
-                </div>
               </div>
               <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
               <div class="flex justify-between items-center">
@@ -297,10 +274,10 @@
                   <div class="flex justify-between items-start mb-2">
                     <h5 class="font-medium text-gray-900 text-sm flex-1 mr-2">{{ task.name || 'Tarefa sem nome' }}</h5>
                     <button
-                      @click.stop="updateTaskStatus(task.id, 'in-progress')"
+                      @click.stop="reopenTask(task)"
                       :disabled="updatingTasks.includes(task.id)"
                       class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                      title="Mover para Em Andamento"
+                      title="Reabrir Tarefa"
                     >
                       <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -310,7 +287,7 @@
                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
-                        Voltar
+                        Reabrir
                       </span>
                     </button>
                   </div>
@@ -343,12 +320,181 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Detalhes da Tarefa -->
+    <div v-if="showTaskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <!-- Header do Modal -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ selectedTask?.status === 'completed' ? 'Detalhes da Tarefa' : 'Concluir Tarefa' }}
+            </h3>
+          </div>
+          <button
+            @click="closeTaskModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Conteúdo do Modal -->
+        <div class="p-6">
+          <!-- Informações da Tarefa -->
+          <div class="space-y-4">
+            <!-- Nome da Tarefa -->
+            <div>
+              <h4 class="text-xl font-medium text-gray-900 mb-2">
+                {{ selectedTask?.name || 'Tarefa sem nome' }}
+              </h4>
+            </div>
+
+            <!-- Processo -->
+            <div class="flex items-center">
+              <span class="text-sm font-medium text-gray-700 mr-2">Processo:</span>
+              <span class="text-sm text-gray-600">{{ selectedTask?.processIdentifier || 'Processo não encontrado' }}</span>
+            </div>
+
+            <!-- Status -->
+            <div class="flex items-center">
+              <span class="text-sm font-medium text-gray-700 mr-2">Status:</span>
+              <span 
+                v-if="selectedTask?.status === 'completed'"
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+              >
+                Concluído
+              </span>
+              <span 
+                v-else
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+              >
+                Em Andamento
+              </span>
+            </div>
+
+            <!-- Data de Criação -->
+            <div class="flex items-center">
+              <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span class="text-sm font-medium text-gray-700 mr-2">Criada:</span>
+              <span class="text-sm text-gray-600">{{ formatDate(selectedTask?.created_at, false) }}</span>
+            </div>
+
+            <!-- SLA -->
+            <div v-if="selectedTask?.due_date" class="flex items-center">
+              <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span class="text-sm font-medium text-gray-700 mr-2">SLA:</span>
+              <span class="text-sm" :class="getSlaColor(selectedTask?.due_date)">
+                {{ formatDate(selectedTask?.due_date, false) }}
+              </span>
+            </div>
+
+            <!-- Data de Conclusão -->
+            <div v-if="selectedTask?.completion_date" class="flex items-center">
+              <svg class="w-4 h-4 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span class="text-sm font-medium text-gray-700 mr-2">Concluída:</span>
+              <span class="text-sm text-green-600 font-medium">
+                {{ formatDate(selectedTask?.completion_date, false) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Propriedades da Tarefa -->
+          <div v-if="selectedTask?.status !== 'completed' && taskProperties.length > 0" class="mt-6">
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Propriedades da Tarefa</h4>
+            <div class="space-y-4">
+              <div
+                v-for="property in taskProperties"
+                :key="property.id"
+                class="space-y-2"
+              >
+                <label :for="property.id" class="block text-sm font-medium text-gray-700">
+                  {{ property.name }}
+                  <span v-if="property.required" class="text-red-500">*</span>
+                </label>
+                
+                <!-- Campo de seleção para propriedades com opções -->
+                <select
+                  v-if="property.options && property.options.length > 0"
+                  :id="property.id"
+                  v-model="selectedPropertyValues[property.id]"
+                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  :required="property.required"
+                >
+                  <option value="">Selecione uma opção</option>
+                  <option
+                    v-for="option in property.options"
+                    :key="option.id"
+                    :value="option.id"
+                  >
+                    {{ option.name }}
+                  </option>
+                </select>
+                
+                <!-- Campo de texto para propriedades sem opções -->
+                <input
+                  v-else
+                  :id="property.id"
+                  v-model="selectedPropertyValues[property.id]"
+                  type="text"
+                  class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  :placeholder="`Digite o valor para ${property.name}`"
+                  :required="property.required"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Pergunta de Confirmação -->
+          <div v-if="selectedTask?.status !== 'completed'" class="mt-6">
+            <p class="text-gray-700">Deseja marcar esta tarefa como concluída?</p>
+          </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex justify-end space-x-3 p-6 border-t border-gray-200">
+          <button
+            @click="closeTaskModal"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {{ selectedTask?.status === 'completed' ? 'Fechar' : 'Cancelar' }}
+          </button>
+          <button
+            v-if="selectedTask?.status !== 'completed'"
+            @click="completeTask"
+            :disabled="updatingTasks.includes(selectedTask?.id)"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            <svg v-if="updatingTasks.includes(selectedTask?.id)" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ updatingTasks.includes(selectedTask?.id) ? 'Concluindo...' : 'Concluir Tarefa' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useProcessesStore } from '../stores/processes'
+import { taskService } from '../services/api'
+import { useNotifications } from '../composables/useNotifications'
 
 export default {
   name: 'TaskBoard',
@@ -372,6 +518,17 @@ export default {
     
     // Estado dos grupos expandidos
     const expandedGroups = ref([])
+
+    // Estado do modal
+    const showTaskModal = ref(false)
+    const selectedTask = ref(null)
+
+    // Propriedades da tarefa
+    const taskProperties = ref([])
+    const selectedPropertyValues = ref({})
+
+    // Usar sistema de notificações global
+    const { showSuccess, showError, showInfo } = useNotifications()
 
     const loading = computed(() => processesStore.loading)
     const error = computed(() => processesStore.error)
@@ -672,9 +829,114 @@ export default {
       }
     }
 
-    const openTaskDetails = (task) => {
-      console.log('Detalhes da tarefa:', task)
-      // Aqui você pode abrir um modal ou navegar para uma página de detalhes
+    const openTaskDetails = async (task) => {
+      selectedTask.value = task
+      showTaskModal.value = true
+      
+      // Limpar valores anteriores
+      selectedPropertyValues.value = {}
+      
+      // Buscar propriedades da tarefa se não estiver concluída
+      if (task.status !== 'completed') {
+        try {
+          const response = await taskService.getTaskProperties(task.id)
+          if (response.success) {
+            taskProperties.value = response.data.properties || []
+          } else {
+            console.error('Erro ao buscar propriedades:', response.error)
+            taskProperties.value = []
+          }
+        } catch (error) {
+          console.error('Erro ao buscar propriedades da tarefa:', error)
+          taskProperties.value = []
+        }
+      } else {
+        taskProperties.value = []
+      }
+    }
+
+    const closeTaskModal = () => {
+      showTaskModal.value = false
+      selectedTask.value = null
+      taskProperties.value = []
+      selectedPropertyValues.value = {}
+    }
+
+
+
+    const completeTask = async () => {
+      if (!selectedTask.value) return
+      
+      // Validar propriedades obrigatórias
+      const requiredProperties = taskProperties.value.filter(p => p.required)
+      const missingProperties = requiredProperties.filter(p => !selectedPropertyValues.value[p.id])
+      
+      if (missingProperties.length > 0) {
+        showError(`Por favor, preencha as propriedades obrigatórias: ${missingProperties.map(p => p.name).join(', ')}`)
+        return
+      }
+      
+      // Preparar valores das propriedades no formato esperado pela API
+      const propertyValues = taskProperties.value
+        .filter(p => selectedPropertyValues.value[p.id])
+        .map(p => {
+          const selectedOption = p.options?.find(opt => opt.id === selectedPropertyValues.value[p.id])
+          return {
+            id: p.id,
+            value: selectedPropertyValues.value[p.id],
+            text: selectedOption?.name || selectedPropertyValues.value[p.id]
+          }
+        })
+      
+      // Adicionar task ao loading state
+      updatingTasks.value.push(selectedTask.value.id)
+      
+      try {
+        const result = await taskService.completeTask(selectedTask.value.id, propertyValues)
+        if (result.success) {
+          // Atualizar dados após conclusão da tarefa
+          await processesStore.fetchTasks()
+          closeTaskModal()
+          
+          // Mostrar notificação de sucesso
+          showSuccess('Tarefa concluída com sucesso!')
+        } else {
+          console.error('Erro ao concluir tarefa:', result.error)
+          showError(`Erro ao concluir tarefa: ${result.error}`)
+        }
+              } catch (error) {
+          console.error('Erro ao concluir tarefa:', error)
+          showError('Erro ao concluir tarefa. Verifique o console para mais detalhes.')
+        } finally {
+        // Remover task do loading state
+        const index = updatingTasks.value.indexOf(selectedTask.value.id)
+        if (index > -1) {
+          updatingTasks.value.splice(index, 1)
+        }
+      }
+    }
+
+    const reopenTask = async (task) => {
+      // Adicionar task ao loading state
+      updatingTasks.value.push(task.id)
+      
+      try {
+        const result = await processesStore.updateTaskStatus(task.id, 'in-progress')
+        if (result.success) {
+          // Atualizar dados após mudança de status
+          await processesStore.fetchTasks()
+        } else {
+          console.error('Erro ao reabrir tarefa:', result.error)
+        }
+      } catch (error) {
+        console.error('Erro ao reabrir tarefa:', error)
+      } finally {
+        // Remover task do loading state
+        const index = updatingTasks.value.indexOf(task.id)
+        if (index > -1) {
+          updatingTasks.value.splice(index, 1)
+        }
+      }
     }
 
     const getProcessName = (processId) => {
@@ -744,6 +1006,8 @@ export default {
       await processesStore.initializeData()
     })
 
+    
+
     return {
       loading,
       error,
@@ -767,6 +1031,10 @@ export default {
       filteringTasks,
       expandedGroups,
       groupedCompletedTasks,
+      showTaskModal,
+      selectedTask,
+      taskProperties,
+      selectedPropertyValues,
       refreshData,
       filterByProcess,
       addTag,
@@ -782,6 +1050,9 @@ export default {
       collapseAllGroups,
       updateTaskStatus,
       openTaskDetails,
+      closeTaskModal,
+      completeTask,
+      reopenTask,
       getProcessName,
       formatDate,
       getSlaColor

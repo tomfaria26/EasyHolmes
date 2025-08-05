@@ -145,6 +145,52 @@ class HolmesService {
       throw new Error('Falha ao atualizar status da tarefa');
     }
   }
+
+  /**
+   * Buscar opções de uma propriedade
+   */
+  async getPropertyOptions(propertyTypeId) {
+    try {
+      const response = await holmesClient.post(`/entities/${propertyTypeId}/instances/search`, {});
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar opções da propriedade ${propertyTypeId}:`, error.message);
+      throw new Error('Falha ao buscar opções da propriedade');
+    }
+  }
+
+  /**
+   * Executar ação de uma tarefa (concluir tarefa)
+   */
+  async executeTaskAction(taskId, actionId, propertyValues = []) {
+    try {
+      const payload = {
+        task: {
+          action_id: actionId,
+          property_values: propertyValues,
+          confirm_action: false
+        }
+      };
+
+      console.log(`[DEBUG] Executando ação da tarefa ${taskId} com action_id: ${actionId}`);
+      console.log(`[DEBUG] Property values:`, JSON.stringify(propertyValues, null, 2));
+      console.log(`[DEBUG] Payload enviado:`, JSON.stringify(payload, null, 2));
+
+      const response = await holmesClient.post(`/tasks/${taskId}/action`, payload);
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao executar ação da tarefa ${taskId}:`, error.message);
+      
+      // Log detalhes adicionais do erro
+      if (error.response) {
+        console.error(`[DEBUG] Status code: ${error.response.status}`);
+        console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
+        console.error(`[DEBUG] Response headers:`, JSON.stringify(error.response.headers, null, 2));
+      }
+      
+      throw new Error('Falha ao executar ação da tarefa');
+    }
+  }
 }
 
 module.exports = new HolmesService(); 

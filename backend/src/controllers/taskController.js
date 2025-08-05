@@ -1,6 +1,18 @@
 const holmesService = require('../services/holmesService');
 
 /**
+ * Extrair ID do botão de ação "Ok" de uma tarefa
+ */
+function extractOkActionId(taskData) {
+  if (!taskData || !taskData.actions || !Array.isArray(taskData.actions)) {
+    return null;
+  }
+
+  const okAction = taskData.actions.find(action => action.name === 'Ok');
+  return okAction ? okAction.id : null;
+}
+
+/**
  * Buscar todas as tarefas de todos os processos (baseado no código Streamlit)
  */
 async function getAllTasksFromAllProcesses() {
@@ -210,6 +222,117 @@ class TaskController {
       });
     } catch (error) {
       console.error(`Erro ao atualizar tarefa ${req.params.id}:`, error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Buscar opções de propriedades de uma tarefa
+   * GET /api/tasks/:id/properties
+   */
+  async getTaskProperties(req, res) {
+    try {
+      const { id } = req.params;
+      
+      // Buscar detalhes da tarefa
+      const taskDetails = await holmesService.getTaskDetails(id);
+      
+      if (!taskDetails.properties || taskDetails.properties.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            properties: [],
+            message: 'Esta tarefa não possui propriedades para preencher'
+          }
+        });
+      }
+
+      // Buscar opções para cada propriedade que tem type
+      const propertiesWithOptions = [];
+      
+      for (const property of taskDetails.properties) {
+        if (property.type && property.required) {
+          try {
+            const options = await holmesService.getPropertyOptions(property.type);
+            propertiesWithOptions.push({
+              ...property,
+              options: options.docs || []
+            });
+          } catch (error) {
+            console.error(`Erro ao buscar opções da propriedade ${property.id}:`, error);
+            propertiesWithOptions.push({
+              ...property,
+              options: []
+            });
+          }
+        } else {
+          propertiesWithOptions.push({
+            ...property,
+            options: []
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          properties: propertiesWithOptions,
+          taskDetails: {
+            id: taskDetails.id,
+            name: taskDetails.name,
+            actions: taskDetails.actions
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Erro ao buscar propriedades da tarefa ${req.params.id}:`, error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Concluir uma tarefa executando a ação "Ok"
+   * POST /api/tasks/:id/complete
+   */
+  async completeTask(req, res) {
+    try {
+      const { id } = req.params;
+      const { propertyValues = [] } = req.body;
+      
+      // Buscar detalhes da tarefa para obter as ações disponíveis
+      const taskDetails = await holmesService.getTaskDetails(id);
+      
+      // Extrair o ID do botão de ação "Ok"
+      const okActionId = extractOkActionId(taskDetails);
+      
+      if (!okActionId) {
+        return res.status(400).json({
+          error: 'Ação "Ok" não encontrada',
+          message: 'Esta tarefa não possui um botão de ação "Ok" disponível'
+        });
+      }
+
+      // Executar a ação da tarefa com os valores das propriedades
+      const result = await holmesService.executeTaskAction(id, okActionId, propertyValues);
+      
+      res.json({
+        success: true,
+        message: 'Tarefa concluída com sucesso',
+        data: {
+          taskId: id,
+          actionId: okActionId,
+          propertyValues: propertyValues,
+          result: result
+        }
+      });
+    } catch (error) {
+      console.error(`Erro ao concluir tarefa ${req.params.id}:`, error);
       res.status(500).json({
         error: 'Erro interno do servidor',
         message: error.message

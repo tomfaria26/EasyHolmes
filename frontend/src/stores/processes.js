@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { processService, taskService } from '../services/api';
+import { useNotifications } from '../composables/useNotifications';
 
 export const useProcessesStore = defineStore('processes', {
   state: () => ({
@@ -153,6 +154,8 @@ export const useProcessesStore = defineStore('processes', {
      * Atualizar status de uma tarefa
      */
     async updateTaskStatus(taskId, newStatus) {
+      const { showSuccess, showError } = useNotifications();
+      
       try {
         const response = await taskService.updateTaskStatus(taskId, newStatus);
         
@@ -163,12 +166,15 @@ export const useProcessesStore = defineStore('processes', {
             this.tasks[taskIndex] = { ...this.tasks[taskIndex], status: newStatus };
             this.updateStats();
           }
+          showSuccess('Status da tarefa atualizado com sucesso!');
           return { success: true };
         } else {
+          showError(`Erro ao atualizar tarefa: ${response.message}`);
           return { success: false, error: response.message };
         }
       } catch (error) {
         console.error(`Erro ao atualizar tarefa ${taskId}:`, error);
+        showError('Falha ao atualizar tarefa');
         return { success: false, error: 'Falha ao atualizar tarefa' };
       }
     },
@@ -203,10 +209,59 @@ export const useProcessesStore = defineStore('processes', {
      * Inicializar dados
      */
     async initializeData() {
-      await Promise.all([
-        this.fetchProcesses(),
-        this.fetchTasks()
-      ]);
+      this.loading = true;
+      this.error = null;
+
+      try {
+        await Promise.all([
+          this.fetchProcessesInternal(),
+          this.fetchTasksInternal()
+        ]);
+        this.updateStats();
+      } catch (error) {
+        console.error('Erro ao inicializar dados:', error);
+        this.error = 'Falha ao carregar dados';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Buscar processos (versão interna sem gerenciamento de loading)
+     */
+    async fetchProcessesInternal() {
+      try {
+        const response = await processService.getProcesses();
+        
+        if (response.success) {
+          // Garantir que processes seja sempre um array
+          this.processes = response.data.processes || response.data || [];
+        } else {
+          this.error = response.message || 'Erro ao buscar processos';
+        }
+      } catch (error) {
+        console.error('Erro ao buscar processos:', error);
+        this.error = 'Falha ao carregar processos';
+      }
+    },
+
+    /**
+     * Buscar tarefas (versão interna sem gerenciamento de loading)
+     */
+    async fetchTasksInternal(params = {}) {
+      try {
+        // Buscar todas as tarefas sem paginação para garantir que todas sejam carregadas
+        const response = await taskService.getAllTasks({ ...params, limit: 1000, offset: 0 });
+        
+        if (response.success) {
+          this.tasks = response.data.tasks || response.data || [];
+        } else {
+          this.error = response.message || 'Erro ao buscar tarefas';
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tarefas:', error);
+        this.error = 'Falha ao carregar tarefas';
+      }
     }
   }
 }); 

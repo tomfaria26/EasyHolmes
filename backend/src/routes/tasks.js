@@ -16,7 +16,13 @@ router.get('/status/:status', taskController.getTasksByStatus);
 // GET /api/tasks/:id - Buscar detalhes de uma tarefa
 router.get('/:id', taskController.getTaskDetails);
 
+// GET /api/tasks/:id/properties - Buscar propriedades de uma tarefa
+router.get('/:id/properties', taskController.getTaskProperties);
+
 // PATCH /api/tasks/:id/status - Atualizar status de uma tarefa
 router.patch('/:id/status', taskController.updateTaskStatus);
+
+// POST /api/tasks/:id/complete - Concluir uma tarefa
+router.post('/:id/complete', taskController.completeTask);
 
 module.exports = router; 

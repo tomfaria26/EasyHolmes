@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { authService } from '../services/api';
+import { useNotifications } from '../composables/useNotifications';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({

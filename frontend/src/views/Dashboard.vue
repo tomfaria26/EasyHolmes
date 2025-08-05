@@ -173,11 +173,13 @@
 <script>
 import { computed, onMounted } from 'vue'
 import { useProcessesStore } from '../stores/processes'
+import { useNotifications } from '../composables/useNotifications'
 
 export default {
   name: 'Dashboard',
   setup() {
     const processesStore = useProcessesStore()
+    const { showSuccess, showError } = useNotifications()
 
     const loading = computed(() => processesStore.loading)
     const error = computed(() => processesStore.error)
@@ -185,7 +187,12 @@ export default {
     const processes = computed(() => processesStore.processes)
 
     const refreshData = async () => {
-      await processesStore.initializeData()
+      try {
+        await processesStore.initializeData()
+        showSuccess('Dados atualizados com sucesso!')
+      } catch (error) {
+        showError('Erro ao atualizar dados')
+      }
     }
 
     const selectProcess = (process) => {

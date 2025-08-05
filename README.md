@@ -10,6 +10,7 @@ Aplicação web para gerenciamento de processos BPMN integrada com a plataforma 
 - ✅ **Diagramas BPMN interativos**
 - ✅ **Integração com APIs Holmes**
 - ✅ **Interface responsiva e moderna**
+- ✅ **Conclusão automática de tarefas** - Extrai e executa ações "Ok" das tarefas Holmes
 
 ## 🛠️ Tecnologias
 

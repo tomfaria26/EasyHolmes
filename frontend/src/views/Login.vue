@@ -88,6 +88,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useNotifications } from '../composables/useNotifications'
 
 export default {
   name: 'Login',
@@ -96,19 +97,24 @@ export default {
     const password = ref('')
     const router = useRouter()
     const authStore = useAuthStore()
+    const { showSuccess, showError } = useNotifications()
 
     const loading = computed(() => authStore.loading)
     const error = computed(() => authStore.error)
 
     const handleLogin = async () => {
       if (!email.value || !password.value) {
+        showError('Por favor, preencha email e senha')
         return
       }
 
       const result = await authStore.login(email.value, password.value)
       
       if (result.success) {
+        showSuccess('Login realizado com sucesso!')
         router.push('/dashboard')
+      } else {
+        showError(result.error || 'Erro no login')
       }
     }
 
