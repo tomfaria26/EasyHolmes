@@ -5,75 +5,209 @@
         <h1 class="text-2xl font-bold text-gray-900">
           Quadro de Tarefas
         </h1>
-        <button class="btn btn-primary">
-          Nova Tarefa
-        </button>
+        <div class="flex space-x-3">
+          <button
+            @click="refreshData"
+            :disabled="loading"
+            class="btn btn-secondary flex items-center"
+          >
+            <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Atualizar
+          </button>
+          <button class="btn btn-primary">
+            Nova Tarefa
+          </button>
+        </div>
       </div>
 
-      <!-- Filtros -->
-      <div class="flex space-x-4 mb-6">
-        <select class="input w-64">
-          <option value="">Todos os Processos</option>
-          <option value="process1">Processo 1</option>
-          <option value="process2">Processo 2</option>
-        </select>
-        <select class="input w-48">
-          <option value="">Todos os Status</option>
-          <option value="pending">Pendente</option>
-          <option value="in-progress">Em Andamento</option>
-          <option value="completed">Concluído</option>
-        </select>
+      <!-- Mensagem de erro -->
+      <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-800">{{ error }}</p>
+          </div>
+        </div>
       </div>
 
-      <!-- KanBan Board -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Coluna: Pendente -->
-        <div class="bg-gray-50 rounded-lg p-4">
-          <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-            <span class="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
-            Pendente
-            <span class="ml-auto bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm">
-              {{ pendingTasks.length }}
-            </span>
-          </h3>
-          
-          <div class="space-y-3">
-            <div
-              v-for="task in pendingTasks"
-              :key="task.id"
-              class="bg-white rounded-lg p-4 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+      <!-- Campo de Pesquisa com Tags -->
+      <div class="mb-6">
+        <div class="flex flex-wrap items-center gap-2 p-3 border border-gray-300 rounded-lg bg-white">
+          <!-- Tags ativas -->
+          <div
+            v-for="tag in activeTags"
+            :key="tag.id"
+            class="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+          >
+            <span>{{ tag.label }}</span>
+            <button
+              @click="removeTag(tag.id)"
+              class="ml-1 text-blue-600 hover:text-blue-800"
             >
-              <h4 class="font-medium text-gray-900">{{ task.title }}</h4>
-              <p class="text-sm text-gray-600 mt-1">{{ task.process }}</p>
-              <div class="flex justify-between items-center mt-3">
-                <span class="text-xs text-gray-500">{{ task.createdAt }}</span>
-                <span class="text-xs text-red-600">{{ task.sla }}</span>
-              </div>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Campo de pesquisa -->
+          <input
+            v-model="searchQuery"
+            @input="handleSearchInput"
+            @keydown.enter="addCurrentSuggestion"
+            @keydown.escape="clearSearch"
+            @focus="showSuggestions = true"
+            @blur="handleBlur"
+            type="text"
+            placeholder="Pesquisar por processo, obra, disciplina, fase..."
+            class="flex-1 min-w-0 px-2 py-1 border-none outline-none text-sm"
+          />
+          
+          <!-- Botão limpar -->
+          <button
+            v-if="activeTags.length > 0"
+            @click="clearAllTags"
+            class="text-gray-500 hover:text-gray-700 text-sm"
+          >
+            Limpar tudo
+          </button>
+        </div>
+        
+        <!-- Sugestões -->
+        <div
+          v-if="showSuggestions && filteredSuggestions.length > 0"
+          class="absolute z-10 w-full max-w-2xl mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
+          <div
+            v-for="suggestion in filteredSuggestions"
+            :key="suggestion.id"
+            @click="addTag(suggestion)"
+            @mouseenter="hoveredSuggestion = suggestion.id"
+            :class="[
+              'px-4 py-2 cursor-pointer text-sm hover:bg-gray-100',
+              hoveredSuggestion === suggestion.id ? 'bg-gray-100' : ''
+            ]"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-xs">{{ suggestion.type }}</span>
+              <span class="font-medium">{{ suggestion.label }}</span>
+              <span v-if="suggestion.description" class="text-gray-600 text-xs">{{ suggestion.description }}</span>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="flex flex-col items-center">
+          <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-lg font-medium text-gray-700 mb-2">Carregando dados...</p>
+          <p class="text-sm text-gray-500">Buscando tarefas e processos</p>
+          <div class="mt-4 flex space-x-2">
+            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+            <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="filteredTasks.length === 0" class="text-center py-12">
+        <svg class="h-16 w-16 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        <p class="mt-4 text-gray-500">
+          {{ activeTags.length > 0 ? 'Nenhuma tarefa encontrada com os filtros aplicados' : 'Nenhuma tarefa encontrada' }}
+        </p>
+        <p class="text-sm text-gray-400">
+          {{ activeTags.length > 0 ? 'Tente ajustar os filtros ou limpar a pesquisa' : 'Tente ajustar os filtros ou criar uma nova tarefa' }}
+        </p>
+        <div v-if="activeTags.length > 0" class="mt-4">
+          <button
+            @click="clearAllTags"
+            class="btn btn-secondary text-sm"
+          >
+            Limpar Filtros
+          </button>
+        </div>
+      </div>
+
+             <!-- KanBan Board -->
+       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <!-- Coluna: Em Andamento -->
         <div class="bg-gray-50 rounded-lg p-4">
           <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
             <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
             Em Andamento
-            <span class="ml-auto bg-yellow-200 text-yellow-700 px-2 py-1 rounded-full text-sm">
-              {{ inProgressTasks.length }}
-            </span>
+                         <span class="ml-auto bg-yellow-200 text-yellow-700 px-2 py-1 rounded-full text-sm">
+               {{ filteredTasks.filter(t => t.status === 'in-progress').length }}
+             </span>
           </h3>
-          
-          <div class="space-y-3">
-            <div
-              v-for="task in inProgressTasks"
-              :key="task.id"
-              class="bg-white rounded-lg p-4 shadow-sm border border-yellow-200 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h4 class="font-medium text-gray-900">{{ task.title }}</h4>
-              <p class="text-sm text-gray-600 mt-1">{{ task.process }}</p>
-              <div class="flex justify-between items-center mt-3">
-                <span class="text-xs text-gray-500">{{ task.createdAt }}</span>
-                <span class="text-xs text-yellow-600">{{ task.sla }}</span>
+
+                     <div class="space-y-3 min-h-[200px]">
+             <div
+               v-for="task in filteredTasks.filter(t => t.status === 'in-progress')"
+               :key="task.id"
+               class="bg-white rounded-lg p-4 shadow-sm border border-yellow-200 cursor-pointer hover:shadow-md transition-shadow"
+               @click="openTaskDetails(task)"
+             >
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
+                <div class="flex space-x-1">
+                  <button
+                    @click.stop="updateTaskStatus(task.id, 'pending')"
+                    :disabled="updatingTasks.includes(task.id)"
+                    class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Mover para Pendente"
+                  >
+                    <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span v-else>←</span>
+                  </button>
+                  <button
+                    @click.stop="updateTaskStatus(task.id, 'completed')"
+                    :disabled="updatingTasks.includes(task.id)"
+                    class="text-green-600 hover:text-green-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Marcar como Concluída"
+                  >
+                    <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span v-else>→</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-500 flex items-center">
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Criada: {{ formatDate(task.created_at, false) }}
+                </span>
+                <span v-if="task.due_date" class="text-xs flex items-center" :class="getSlaColor(task.due_date)">
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                  SLA: {{ formatDate(task.due_date, false) }}
+                </span>
               </div>
             </div>
           </div>
@@ -84,22 +218,47 @@
           <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
             <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
             Concluído
-            <span class="ml-auto bg-green-200 text-green-700 px-2 py-1 rounded-full text-sm">
-              {{ completedTasks.length }}
-            </span>
+                         <span class="ml-auto bg-green-200 text-green-700 px-2 py-1 rounded-full text-sm">
+               {{ filteredTasks.filter(t => t.status === 'completed').length }}
+             </span>
           </h3>
-          
-          <div class="space-y-3">
-            <div
-              v-for="task in completedTasks"
-              :key="task.id"
-              class="bg-white rounded-lg p-4 shadow-sm border border-green-200 cursor-pointer hover:shadow-md transition-shadow"
-            >
-              <h4 class="font-medium text-gray-900">{{ task.title }}</h4>
-              <p class="text-sm text-gray-600 mt-1">{{ task.process }}</p>
-              <div class="flex justify-between items-center mt-3">
-                <span class="text-xs text-gray-500">{{ task.createdAt }}</span>
-                <span class="text-xs text-green-600">{{ task.sla }}</span>
+
+                     <div class="space-y-3 min-h-[200px]">
+             <div
+               v-for="task in filteredTasks.filter(t => t.status === 'completed')"
+               :key="task.id"
+               class="bg-white rounded-lg p-4 shadow-sm border border-green-200 cursor-pointer hover:shadow-md transition-shadow"
+               @click="openTaskDetails(task)"
+             >
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
+                <button
+                  @click.stop="updateTaskStatus(task.id, 'in-progress')"
+                  :disabled="updatingTasks.includes(task.id)"
+                  class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Mover para Em Andamento"
+                >
+                  <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span v-else>←</span>
+                </button>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-500 flex items-center">
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Criada: {{ formatDate(task.created_at, false) }}
+                </span>
+                <span v-if="task.completion_date" class="text-xs flex items-center text-green-600 font-medium">
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  Concluída: {{ formatDate(task.completion_date, false) }}
+                </span>
               </div>
             </div>
           </div>
@@ -110,66 +269,376 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useProcessesStore } from '../stores/processes'
 
 export default {
   name: 'TaskBoard',
   setup() {
-    const pendingTasks = ref([])
-    const inProgressTasks = ref([])
-    const completedTasks = ref([])
+    const processesStore = useProcessesStore()
+    
+    const selectedProcess = ref('')
+    const selectedObra = ref('')
+    const selectedDisciplina = ref('')
+    const selectedFase = ref('')
+    
+    // Sistema de tags
+    const searchQuery = ref('')
+    const activeTags = ref([])
+    const showSuggestions = ref(false)
+    const hoveredSuggestion = ref(null)
+    
+    // Loading states
+    const updatingTasks = ref([])
+    const filteringTasks = ref(false)
 
-    onMounted(() => {
-      // Simular dados por enquanto
-      pendingTasks.value = [
-        {
-          id: 1,
-          title: 'Revisar Documento',
-          process: 'Processo de Aprovação',
-          createdAt: '2024-01-15 10:30',
-          sla: 'SLA: 2 dias'
-        },
-        {
-          id: 2,
-          title: 'Validar Dados',
-          process: 'Processo de Validação',
-          createdAt: '2024-01-15 09:15',
-          sla: 'SLA: 1 dia'
-        }
-      ]
+    const loading = computed(() => processesStore.loading)
+    const error = computed(() => processesStore.error)
+    const tasks = computed(() => processesStore.tasks)
+    const processes = computed(() => processesStore.processes)
+    const tasksByStatus = computed(() => processesStore.tasksByStatus)
 
-      inProgressTasks.value = [
-        {
-          id: 3,
-          title: 'Análise Técnica',
-          process: 'Processo de Desenvolvimento',
-          createdAt: '2024-01-14 14:20',
-          sla: 'SLA: 3 dias'
+    // Função para extrair componentes do identifier do processo
+    const extractProcessComponents = (identifier) => {
+      if (!identifier) return { obra: '', disciplina: '', fase: '' }
+      
+      // Padrão: "Auditoria BIM-R24-ARQ-PB"
+      const match = identifier.match(/Auditoria BIM-([^-]+)-([^-]+)-([^-]+)/)
+      if (match) {
+        return {
+          obra: match[1],
+          disciplina: match[2],
+          fase: match[3]
         }
-      ]
+      }
+      return { obra: '', disciplina: '', fase: '' }
+    }
 
-      completedTasks.value = [
-        {
-          id: 4,
-          title: 'Configuração Inicial',
-          process: 'Processo de Setup',
-          createdAt: '2024-01-13 16:45',
-          sla: 'SLA: 1 dia'
-        },
-        {
-          id: 5,
-          title: 'Teste de Integração',
-          process: 'Processo de QA',
-          createdAt: '2024-01-12 11:30',
-          sla: 'SLA: 2 dias'
+    // Extrair valores únicos para os filtros
+    const uniqueObras = computed(() => {
+      const obras = new Set()
+      processes.value.forEach(process => {
+        const { obra } = extractProcessComponents(process.identifier)
+        if (obra) obras.add(obra)
+      })
+      return Array.from(obras).sort()
+    })
+
+    const uniqueDisciplinas = computed(() => {
+      const disciplinas = new Set()
+      processes.value.forEach(process => {
+        const { disciplina } = extractProcessComponents(process.identifier)
+        if (disciplina) disciplinas.add(disciplina)
+      })
+      return Array.from(disciplinas).sort()
+    })
+
+    const uniqueFases = computed(() => {
+      const fases = new Set()
+      processes.value.forEach(process => {
+        const { fase } = extractProcessComponents(process.identifier)
+        if (fase) fases.add(fase)
+      })
+      return Array.from(fases).sort()
+    })
+
+    // Gerar todas as sugestões disponíveis
+    const allSuggestions = computed(() => {
+      const suggestions = []
+      
+      // Processos completos
+      processes.value.forEach(process => {
+        if (process.identifier) {
+          suggestions.push({
+            id: `process-${process.id}`,
+            type: 'Processo',
+            label: process.identifier,
+            value: process.id,
+            filterType: 'process',
+            description: 'Processo completo'
+          })
         }
-      ]
+      })
+      
+      // Obras
+      uniqueObras.value.forEach(obra => {
+        suggestions.push({
+          id: `obra-${obra}`,
+          type: 'Obra',
+          label: obra,
+          value: obra,
+          filterType: 'obra',
+          description: 'Filtrar por obra'
+        })
+      })
+      
+      // Disciplinas
+      uniqueDisciplinas.value.forEach(disciplina => {
+        suggestions.push({
+          id: `disciplina-${disciplina}`,
+          type: 'Disciplina',
+          label: disciplina,
+          value: disciplina,
+          filterType: 'disciplina',
+          description: 'Filtrar por disciplina'
+        })
+      })
+      
+      // Fases
+      uniqueFases.value.forEach(fase => {
+        suggestions.push({
+          id: `fase-${fase}`,
+          type: 'Fase',
+          label: fase,
+          value: fase,
+          filterType: 'fase',
+          description: 'Filtrar por fase'
+        })
+      })
+      
+      return suggestions
+    })
+
+    // Filtrar sugestões baseado na pesquisa
+    const filteredSuggestions = computed(() => {
+      if (!searchQuery.value) return allSuggestions.value
+      
+      const query = searchQuery.value.toLowerCase()
+      return allSuggestions.value.filter(suggestion => {
+        // Verificar se já está ativa
+        const isActive = activeTags.value.some(tag => tag.id === suggestion.id)
+        if (isActive) return false
+        
+        return suggestion.label.toLowerCase().includes(query) ||
+               suggestion.type.toLowerCase().includes(query) ||
+               suggestion.description.toLowerCase().includes(query)
+      })
+    })
+
+         // Filtrar tarefas baseado nas tags ativas
+     const filteredTasks = computed(() => {
+       let filtered = tasks.value
+       
+                       activeTags.value.forEach(tag => {
+          switch (tag.filterType) {
+            case 'process':
+              filtered = filtered.filter(task => task.processId === tag.value)
+              break
+            case 'obra':
+              filtered = filtered.filter(task => {
+                const { obra } = extractProcessComponents(task.processIdentifier)
+                return obra === tag.value
+              })
+              break
+            case 'disciplina':
+              filtered = filtered.filter(task => {
+                const { disciplina } = extractProcessComponents(task.processIdentifier)
+                return disciplina === tag.value
+              })
+              break
+            case 'fase':
+              filtered = filtered.filter(task => {
+                const { fase } = extractProcessComponents(task.processIdentifier)
+                return fase === tag.value
+              })
+              break
+          }
+        })
+       return filtered
+     })
+
+    const refreshData = async () => {
+      await processesStore.initializeData()
+    }
+
+    const filterByProcess = () => {
+      if (selectedProcess.value) {
+        processesStore.fetchProcessTasks(selectedProcess.value)
+      } else {
+        processesStore.fetchTasks()
+      }
+    }
+
+    // Funções para gerenciar tags
+    const addTag = (suggestion) => {
+      activeTags.value.push(suggestion)
+      searchQuery.value = ''
+      showSuggestions.value = false
+    }
+
+    const removeTag = (tagId) => {
+      activeTags.value = activeTags.value.filter(tag => tag.id !== tagId)
+    }
+
+    const clearAllTags = () => {
+      activeTags.value = []
+      searchQuery.value = ''
+      showSuggestions.value = false
+    }
+
+    const handleSearchInput = () => {
+      showSuggestions.value = true
+    }
+
+    const addCurrentSuggestion = () => {
+      if (filteredSuggestions.value.length > 0) {
+        addTag(filteredSuggestions.value[0])
+      }
+    }
+
+    const clearSearch = () => {
+      searchQuery.value = ''
+      showSuggestions.value = false
+    }
+
+    const handleBlur = () => {
+      // Delay para permitir cliques nas sugestões
+      setTimeout(() => {
+        showSuggestions.value = false
+      }, 200)
+    }
+
+    const clearFilters = () => {
+      selectedProcess.value = ''
+      selectedObra.value = ''
+      selectedDisciplina.value = ''
+      selectedFase.value = ''
+      activeTags.value = []
+      searchQuery.value = ''
+      processesStore.fetchTasks()
+    }
+
+    const updateTaskStatus = async (taskId, newStatus) => {
+      // Adicionar task ao loading state
+      updatingTasks.value.push(taskId)
+      
+      try {
+        const result = await processesStore.updateTaskStatus(taskId, newStatus)
+        if (result.success) {
+          // Atualizar dados após mudança de status
+          await processesStore.fetchTasks()
+        } else {
+          console.error('Erro ao atualizar status:', result.error)
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error)
+      } finally {
+        // Remover task do loading state
+        const index = updatingTasks.value.indexOf(taskId)
+        if (index > -1) {
+          updatingTasks.value.splice(index, 1)
+        }
+      }
+    }
+
+    const openTaskDetails = (task) => {
+      console.log('Detalhes da tarefa:', task)
+      // Aqui você pode abrir um modal ou navegar para uma página de detalhes
+    }
+
+    const getProcessName = (processId) => {
+      const process = processes.value.find(p => p.id === processId)
+      return process ? process.name : 'Processo não encontrado'
+    }
+
+    const formatDate = (dateString, includeTime = true) => {
+      if (!dateString) return 'Data não disponível'
+      
+      try {
+        // Converter para data local (UTC para horário de São Paulo)
+        const dt = new Date(dateString)
+        
+        // Verificar se a data é válida
+        if (isNaN(dt.getTime())) {
+          return 'Data inválida'
+        }
+        
+        const saoPauloOffset = -3 * 60 // -3 horas em minutos
+        const localTime = new Date(dt.getTime() + (saoPauloOffset * 60 * 1000))
+        
+        if (includeTime) {
+          return localTime.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        } else {
+          return localTime.toLocaleDateString('pt-BR')
+        }
+      } catch (error) {
+        return 'Data inválida'
+      }
+    }
+
+    const getSlaColor = (dueDate) => {
+      if (!dueDate) return 'text-gray-500'
+      
+      try {
+        const dt = new Date(dueDate)
+        if (isNaN(dt.getTime())) return 'text-gray-500'
+        
+        const now = new Date()
+        const saoPauloOffset = -3 * 60 // -3 horas em minutos
+        const localNow = new Date(now.getTime() + (saoPauloOffset * 60 * 1000))
+        
+        // Comparar apenas a data (sem hora)
+        const dueDateOnly = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+        const todayOnly = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())
+        
+        if (dueDateOnly < todayOnly) {
+          return 'text-red-600 font-semibold' // Atrasado - vermelho
+        } else if (dueDateOnly.getTime() === todayOnly.getTime()) {
+          return 'text-yellow-600 font-semibold' // Vence hoje - amarelo
+        } else {
+          return 'text-green-600 font-medium' // No prazo - verde
+        }
+      } catch (error) {
+        return 'text-gray-500'
+      }
+    }
+
+    onMounted(async () => {
+      await processesStore.initializeData()
     })
 
     return {
-      pendingTasks,
-      inProgressTasks,
-      completedTasks
+      loading,
+      error,
+      tasks,
+      processes,
+      tasksByStatus,
+      filteredTasks,
+      selectedProcess,
+      selectedObra,
+      selectedDisciplina,
+      selectedFase,
+      uniqueObras,
+      uniqueDisciplinas,
+      uniqueFases,
+      searchQuery,
+      activeTags,
+      showSuggestions,
+      hoveredSuggestion,
+      filteredSuggestions,
+      updatingTasks,
+      filteringTasks,
+      refreshData,
+      filterByProcess,
+      addTag,
+      removeTag,
+      clearAllTags,
+      handleSearchInput,
+      addCurrentSuggestion,
+      clearSearch,
+      handleBlur,
+      clearFilters,
+      updateTaskStatus,
+      openTaskDetails,
+      getProcessName,
+      formatDate,
+      getSlaColor
     }
   }
 }
