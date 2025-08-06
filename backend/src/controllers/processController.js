@@ -24,7 +24,7 @@ class ProcessController {
       
       res.json({
         success: true,
-        data: processes
+        data: { processes: processesList.filter(process => process.name === "Auditoria BIM" && process.status !== "canceled") }
       });
     } catch (error) {
       console.error('Erro ao buscar processos:', error);
