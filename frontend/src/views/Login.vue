@@ -76,7 +76,7 @@
           <p class="text-xs text-gray-500">
             <strong>Credenciais de demonstração:</strong><br>
             Email: admin@easyholmes.com<br>
-            Senha: password
+            Senha: admin123
           </p>
         </div>
       </form>

@@ -320,60 +320,6 @@
         </div>
       </div>
 
-      <!-- Paginação -->
-      <div v-if="pagination.totalPages > 1" class="mt-6 flex items-center justify-between">
-        <div class="flex items-center space-x-2 text-sm text-gray-600">
-          <span>
-            Página {{ pagination.currentPage }} de {{ pagination.totalPages }}
-          </span>
-          <span class="text-gray-400">|</span>
-          <span>
-            {{ pagination.totalItems }} tarefa{{ pagination.totalItems !== 1 ? 's' : '' }} no total
-          </span>
-        </div>
-        
-        <div class="flex items-center space-x-2">
-          <!-- Botão Anterior -->
-          <button
-            @click="loadPreviousPage"
-            :disabled="pagination.currentPage <= 1 || loading"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          
-          <!-- Números das páginas -->
-          <div class="flex items-center space-x-1">
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              @click="loadPage(page)"
-              :class="[
-                'px-3 py-2 text-sm font-medium rounded-md',
-                page === pagination.currentPage
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700'
-              ]"
-              :disabled="loading"
-            >
-              {{ page }}
-            </button>
-          </div>
-          
-          <!-- Botão Próximo -->
-          <button
-            @click="loadNextPage"
-            :disabled="!pagination.hasMore || loading"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- Modal de Detalhes da Tarefa -->
@@ -577,7 +523,7 @@ export default {
   name: 'TaskBoard',
   setup() {
     const processesStore = useProcessesStore()
-    const { pagination, loading } = storeToRefs(processesStore)
+    const { loading } = storeToRefs(processesStore)
     
     const selectedProcess = ref('')
     const selectedObra = ref('')
@@ -1119,64 +1065,6 @@ export default {
       }
     }
 
-    // Funções de paginação
-    const loadNextPage = async () => {
-      await processesStore.loadNextPage()
-    }
-
-    const loadPreviousPage = async () => {
-      const previousPage = pagination.value.currentPage - 1
-      if (previousPage >= 1) {
-        await processesStore.loadPage(previousPage)
-      }
-    }
-
-    const loadPage = async (page) => {
-      await processesStore.loadPage(page)
-    }
-
-    // Computed para páginas visíveis na paginação
-    const visiblePages = computed(() => {
-      const current = pagination.value.currentPage
-      const total = pagination.value.totalPages
-      const pages = []
-      
-      if (total <= 7) {
-        // Se há 7 páginas ou menos, mostrar todas
-        for (let i = 1; i <= total; i++) {
-          pages.push(i)
-        }
-      } else {
-        // Se há mais de 7 páginas, mostrar páginas estratégicas
-        if (current <= 4) {
-          // Páginas iniciais
-          for (let i = 1; i <= 5; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(total)
-        } else if (current >= total - 3) {
-          // Páginas finais
-          pages.push(1)
-          pages.push('...')
-          for (let i = total - 4; i <= total; i++) {
-            pages.push(i)
-          }
-        } else {
-          // Páginas do meio
-          pages.push(1)
-          pages.push('...')
-          for (let i = current - 1; i <= current + 1; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(total)
-        }
-      }
-      
-      return pages
-    })
-
     onMounted(async () => {
       await processesStore.initializeData()
     })
@@ -1210,7 +1098,6 @@ export default {
       selectedTask,
       taskProperties,
       selectedPropertyValues,
-      pagination,
       refreshData,
       filterByProcess,
       addTag,
@@ -1231,11 +1118,7 @@ export default {
       reopenTask,
       getProcessName,
       formatDate,
-      getSlaColor,
-      loadNextPage,
-      loadPreviousPage,
-      loadPage,
-      visiblePages
+      getSlaColor
     }
   }
 }

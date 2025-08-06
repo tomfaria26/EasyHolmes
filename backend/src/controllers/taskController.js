@@ -215,17 +215,40 @@ async function getAllTasksFromAllProcesses() {
       }
     }
 
-    // Terceira passagem: buscar detalhes das tarefas pendentes
+    // Terceira passagem: buscar detalhes das tarefas pendentes em paralelo (OTIMIZADO)
+    const pendingTaskIds = [];
     for (const taskId in allTasks) {
       const taskDetails = allTasks[taskId];
       if (!taskDetails.is_completed) {
-        try {
-          const taskApiData = await holmesService.getTaskDetails(taskId);
+        pendingTaskIds.push(taskId);
+      }
+    }
+
+    if (pendingTaskIds.length > 0) {
+      console.log(`[PERFORMANCE] Buscando detalhes de ${pendingTaskIds.length} tarefas pendentes em paralelo`);
+      try {
+        const taskDetailsMap = await holmesService.getMultipleTaskDetails(pendingTaskIds);
+        
+        // Atualizar tarefas com os detalhes obtidos
+        for (const taskId of pendingTaskIds) {
+          const taskApiData = taskDetailsMap[taskId];
           if (taskApiData && taskApiData.due_date) {
-            taskDetails.due_date = taskApiData.due_date;
+            allTasks[taskId].due_date = taskApiData.due_date;
           }
-        } catch (error) {
-          console.warn(`Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
+        }
+      } catch (error) {
+        console.warn('Erro ao buscar detalhes das tarefas em paralelo, tentando sequencial:', error.message);
+        
+        // Fallback para busca sequencial em caso de erro
+        for (const taskId of pendingTaskIds) {
+          try {
+            const taskApiData = await holmesService.getTaskDetails(taskId);
+            if (taskApiData && taskApiData.due_date) {
+              allTasks[taskId].due_date = taskApiData.due_date;
+            }
+          } catch (error) {
+            console.warn(`Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
+          }
         }
       }
     }
@@ -449,32 +472,12 @@ class TaskController {
   }
 
   /**
-   * Buscar todas as tarefas (com filtros opcionais)
+   * Buscar todas as tarefas (sem paginação - sempre retorna todas)
    * GET /api/tasks
    */
   async getAllTasks(req, res) {
     try {
-      const { processId, status, limit = 20, offset = 0, page = 1 } = req.query;
-      
-      // Converter para números
-      const limitNum = parseInt(limit);
-      const offsetNum = parseInt(offset);
-      const pageNum = parseInt(page);
-      
-      // Validar parâmetros
-      if (limitNum < 1 || limitNum > 100) {
-        return res.status(400).json({
-          error: 'Parâmetro inválido',
-          message: 'Limit deve estar entre 1 e 100'
-        });
-      }
-      
-      if (offsetNum < 0) {
-        return res.status(400).json({
-          error: 'Parâmetro inválido',
-          message: 'Offset deve ser maior ou igual a 0'
-        });
-      }
+      const { processId, status } = req.query;
 
       let allTasks = [];
       let totalTasks = 0;
@@ -485,33 +488,20 @@ class TaskController {
         allTasks = tasks;
         totalTasks = tasks.length;
       } else {
-        // Calcular total real de tarefas
-        totalTasks = await getTotalTasksCount(status);
+        // Buscar todas as tarefas de todos os processos
+        console.log('[PERFORMANCE] Buscando todas as tarefas sem paginação');
+        const allTasksFromAll = await getAllTasksFromAllProcesses();
+        totalTasks = allTasksFromAll.length;
         
-        // Buscar tarefas da página solicitada
-        try {
-          allTasks = await this.getTasksWithPagination(limitNum, offsetNum, status);
-          console.log(`[DEBUG] getTasksWithPagination retornou ${allTasks.length} tarefas`);
-        } catch (error) {
-          console.error('Erro ao chamar getTasksWithPagination:', error);
-          // Fallback para o método antigo com paginação manual
-          const allTasksFromAll = await getAllTasksFromAllProcesses();
-          totalTasks = allTasksFromAll.length;
-          
-          // Aplicar filtro de status se necessário
-          let filteredTasks = allTasksFromAll;
-          if (status) {
-            filteredTasks = allTasksFromAll.filter(task => task.status === status);
-            totalTasks = filteredTasks.length;
-          }
-          
-          // Aplicar paginação manual
-          const startIndex = offsetNum;
-          const endIndex = startIndex + limitNum;
-          allTasks = filteredTasks.slice(startIndex, endIndex);
-          
-          console.log(`[DEBUG] Fallback - Total: ${totalTasks}, Offset: ${offsetNum}, Limit: ${limitNum}, Retornando: ${allTasks.length} tarefas`);
+        // Aplicar filtro de status se necessário
+        if (status) {
+          allTasks = allTasksFromAll.filter(task => task.status === status);
+          totalTasks = allTasks.length;
+        } else {
+          allTasks = allTasksFromAll;
         }
+        
+        console.log(`[PERFORMANCE] Retornando ${allTasks.length} tarefas sem paginação`);
       }
 
       // Debug: verificar tarefas do processo R70-HIN-PR
@@ -526,21 +516,16 @@ class TaskController {
         })));
       }
       
-      // Calcular se há mais páginas
-      const totalPages = Math.ceil(totalTasks / limitNum);
-      const hasMore = pageNum < totalPages;
-      
-      console.log(`[DEBUG] Paginação - Total: ${totalTasks}, Página atual: ${pageNum}, Total páginas: ${totalPages}, HasMore: ${hasMore}, Tarefas retornadas: ${allTasks.length}`);
-      
       res.json({
         success: true,
         data: {
           tasks: allTasks,
-          total: totalTasks, // Total real de todas as tarefas
-          limit: limitNum,
-          offset: offsetNum,
-          page: pageNum,
-          hasMore: hasMore
+          total: totalTasks,
+          limit: totalTasks,
+          offset: 0,
+          page: 1,
+          hasMore: false,
+          pagination: false
         }
       });
     } catch (error) {
@@ -553,13 +538,12 @@ class TaskController {
   }
 
   /**
-   * Buscar tarefas por status
+   * Buscar tarefas por status (sem paginação - sempre retorna todas)
    * GET /api/tasks/status/:status
    */
   async getTasksByStatus(req, res) {
     try {
       const { status } = req.params;
-      const { limit = 50, offset = 0 } = req.query;
       
       const validStatuses = ['pending', 'in-progress', 'completed', 'cancelled'];
       if (!validStatuses.includes(status)) {
@@ -572,18 +556,19 @@ class TaskController {
       // Buscar todas as tarefas e filtrar por status
       const allTasks = await getAllTasksFromAllProcesses();
       const filteredTasks = allTasks.filter(task => task.status === status);
+      const totalTasks = filteredTasks.length;
 
-      // Aplicar paginação
-      const paginatedTasks = filteredTasks.slice(offset, offset + limit);
+      console.log(`[PERFORMANCE] getTasksByStatus - Status: ${status}, Retornando todas as ${totalTasks} tarefas sem paginação`);
       
       res.json({
         success: true,
         data: {
-          tasks: paginatedTasks,
-          total: filteredTasks.length,
+          tasks: filteredTasks,
+          total: totalTasks,
           status,
-          limit: parseInt(limit),
-          offset: parseInt(offset)
+          limit: totalTasks,
+          offset: 0,
+          pagination: false
         }
       });
     } catch (error) {
@@ -655,17 +640,40 @@ class TaskController {
         }
       }
 
-      // Terceira passagem: buscar detalhes das tarefas pendentes (baseado no código Streamlit)
+      // Terceira passagem: buscar detalhes das tarefas pendentes em paralelo (OTIMIZADO)
+      const pendingTaskIds = [];
       for (const taskId in allTasks) {
         const taskDetails = allTasks[taskId];
         if (!taskDetails.is_completed) {
-          try {
-            const taskApiData = await holmesService.getTaskDetails(taskId);
+          pendingTaskIds.push(taskId);
+        }
+      }
+
+      if (pendingTaskIds.length > 0) {
+        console.log(`[PERFORMANCE] getTasksFromProcessHistory - Buscando detalhes de ${pendingTaskIds.length} tarefas pendentes em paralelo`);
+        try {
+          const taskDetailsMap = await holmesService.getMultipleTaskDetails(pendingTaskIds);
+          
+          // Atualizar tarefas com os detalhes obtidos
+          for (const taskId of pendingTaskIds) {
+            const taskApiData = taskDetailsMap[taskId];
             if (taskApiData && taskApiData.due_date) {
-              taskDetails.due_date = taskApiData.due_date;
+              allTasks[taskId].due_date = taskApiData.due_date;
             }
-          } catch (error) {
-            console.warn(`Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
+          }
+        } catch (error) {
+          console.warn('Erro ao buscar detalhes das tarefas em paralelo, tentando sequencial:', error.message);
+          
+          // Fallback para busca sequencial em caso de erro
+          for (const taskId of pendingTaskIds) {
+            try {
+              const taskApiData = await holmesService.getTaskDetails(taskId);
+              if (taskApiData && taskApiData.due_date) {
+                allTasks[taskId].due_date = taskApiData.due_date;
+              }
+            } catch (error) {
+              console.warn(`Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
+            }
           }
         }
       }
@@ -690,168 +698,6 @@ class TaskController {
       return tasksArray;
     } catch (error) {
       console.error(`Erro ao buscar tarefas do processo ${processId}:`, error);
-      return [];
-    }
-  }
-
-  /**
-   * Buscar tarefas com paginação eficiente
-   */
-  async getTasksWithPagination(limit, offset, status = null) {
-    try {
-      console.log(`[DEBUG] getTasksWithPagination - limit: ${limit}, offset: ${offset}, status: ${status}`);
-      
-      // Buscar todos os processos
-      const processesResponse = await holmesService.getProcesses();
-      const processes = processesResponse.processes || processesResponse || [];
-      
-      // Filtrar apenas processos "Auditoria BIM" (incluindo closed, excluindo canceled)
-      const filteredProcesses = processes.filter(process => 
-        process.name === 'Auditoria BIM' && 
-        process.status !== 'canceled'
-      );
-
-      const allTasks = [];
-      let currentOffset = 0;
-      let tasksFound = 0;
-      const targetOffset = offset;
-      const targetLimit = limit;
-
-      console.log(`[DEBUG] Processando ${filteredProcesses.length} processos para paginação`);
-
-      // Buscar tarefas de cada processo até atingir o offset e limit desejados
-      for (const process of filteredProcesses) {
-        if (tasksFound >= targetLimit) {
-          console.log(`[DEBUG] Limite atingido (${tasksFound}/${targetLimit}), parando busca`);
-          break;
-        }
-        
-        const processId = process.id;
-        const processIdentifier = process.identifier;
-        
-        if (!processId || !processIdentifier) continue;
-        
-        console.log(`[DEBUG] Processando processo: ${processIdentifier}`);
-        
-        try {
-          // Buscar histórico do processo com paginação
-          const historyPayload = {
-            "filters": [], 
-            "page": 1, 
-            "per_page": 50, // Reduzir para melhor performance
-            "sortBy": ["created_at", "desc"] // Ordenar por mais recente primeiro
-          };
-
-          const historyResponse = await holmesService.getProcessHistory(processId, historyPayload);
-          if (!historyResponse || !historyResponse.histories) continue;
-          
-          // Processar histórico para extrair tarefas
-          const processTasks = [];
-          for (const hist of historyResponse.histories) {
-            const props = hist.properties || {};
-            const taskId = props.task_id;
-            
-            if (taskId && props.long_link) {
-              // Verificar se a tarefa já foi processada
-              const existingTask = allTasks.find(t => t.id === taskId);
-              if (!existingTask) {
-                processTasks.push({
-                  process_id: processId,
-                  process_identifier: processIdentifier,
-                  task_name: props.task_name,
-                  long_link: props.long_link,
-                  task_id: taskId,
-                  created_at: hist.created_at || '',
-                  is_completed: false
-                });
-              }
-            }
-          }
-
-          // Verificar tarefas completadas
-          for (const hist of historyResponse.histories) {
-            if (hist.key === 'history.take_action') {
-              const props = hist.properties || {};
-              const taskId = props.task_id;
-              
-              const taskIndex = processTasks.findIndex(t => t.task_id === taskId);
-              if (taskIndex !== -1) {
-                const completionDate = hist.created_at;
-                const currentCompletion = processTasks[taskIndex].completion_date;
-                
-                if (!currentCompletion || completionDate > currentCompletion) {
-                  processTasks[taskIndex].is_completed = true;
-                  processTasks[taskIndex].completion_date = completionDate;
-                }
-              }
-            }
-          }
-
-          // Buscar detalhes das tarefas pendentes (apenas as que serão retornadas)
-          for (const task of processTasks) {
-            if (!task.is_completed) {
-              try {
-                const taskApiData = await holmesService.getTaskDetails(task.task_id);
-                if (taskApiData && taskApiData.due_date) {
-                  task.due_date = taskApiData.due_date;
-                }
-              } catch (error) {
-                console.warn(`Erro ao buscar detalhes da tarefa ${task.task_id}:`, error.message);
-              }
-            }
-          }
-
-          // Formatar tarefas
-          const formattedTasks = processTasks.map(task => ({
-            id: task.task_id,
-            name: task.task_name,
-            status: task.is_completed ? 'completed' : 'in-progress',
-            processId: task.process_id,
-            processName: 'Auditoria BIM',
-            processIdentifier: task.process_identifier,
-            created_at: task.created_at,
-            due_date: task.due_date,
-            completion_date: task.completion_date,
-            is_completed: task.is_completed || false,
-            long_link: task.long_link,
-            task_id: task.task_id,
-            task_name: task.task_name
-          }));
-
-          // Aplicar filtro de status se especificado
-          const filteredTasks = status 
-            ? formattedTasks.filter(task => task.status === status)
-            : formattedTasks;
-
-          console.log(`[DEBUG] Processo ${processIdentifier} - Tarefas encontradas: ${filteredTasks.length}`);
-
-          // Adicionar tarefas respeitando offset e limit
-          for (const task of filteredTasks) {
-            if (currentOffset < targetOffset) {
-              currentOffset++;
-              console.log(`[DEBUG] Pulando tarefa ${task.id} (offset ${currentOffset}/${targetOffset})`);
-              continue;
-            }
-            
-            if (tasksFound < targetLimit) {
-              allTasks.push(task);
-              tasksFound++;
-              console.log(`[DEBUG] Adicionando tarefa ${task.id} (${tasksFound}/${targetLimit})`);
-            } else {
-              console.log(`[DEBUG] Limite atingido, parando adição de tarefas`);
-              break;
-            }
-          }
-
-        } catch (error) {
-          console.warn(`Erro ao buscar histórico do processo ${processId}:`, error.message);
-        }
-      }
-
-      console.log(`[DEBUG] getTasksWithPagination - Retornando ${allTasks.length} tarefas`);
-      return allTasks;
-    } catch (error) {
-      console.error('Erro ao buscar tarefas com paginação:', error);
       return [];
     }
   }

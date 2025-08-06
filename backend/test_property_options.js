@@ -7,7 +7,7 @@ const holmesClient = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': process.env.API_TOKEN
+    'api_token': process.env.API_TOKEN
   }
 });
 

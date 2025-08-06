@@ -118,7 +118,7 @@ async function completeTask(taskId) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'api_token': `${token}`
       }
     });
 

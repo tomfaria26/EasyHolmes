@@ -9,13 +9,6 @@ export const useProcessesStore = defineStore('processes', {
     selectedProcess: null,
     loading: false,
     error: null,
-    pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: 0,
-      itemsPerPage: 20,
-      hasMore: false
-    },
     stats: {
       activeProcesses: 0,
       pendingTasks: 0,
@@ -66,7 +59,6 @@ export const useProcessesStore = defineStore('processes', {
         if (response.success) {
           // Garantir que processes seja sempre um array
           this.processes = response.data.processes || response.data || [];
-          this.updateStats();
         } else {
           this.error = response.message || 'Erro ao buscar processos';
         }
@@ -79,36 +71,22 @@ export const useProcessesStore = defineStore('processes', {
     },
 
     /**
-     * Buscar tarefas com paginação
+     * Buscar todas as tarefas (sem paginação)
      */
     async fetchTasks(params = {}) {
       this.loading = true;
       this.error = null;
 
       try {
-        const { page = 1, limit = 20, status, processId } = params;
-        const offset = (page - 1) * limit;
+        const { status, processId } = params;
         
         const response = await taskService.getAllTasks({ 
-          limit, 
-          offset, 
-          page,
           status,
           processId
         });
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
-          
-          // Atualizar informações de paginação
-          this.pagination = {
-            currentPage: page,
-            totalPages: Math.ceil(response.data.total / limit),
-            totalItems: response.data.total,
-            itemsPerPage: limit,
-            hasMore: response.data.hasMore || false
-          };
-          
           this.updateStats();
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
@@ -119,31 +97,6 @@ export const useProcessesStore = defineStore('processes', {
       } finally {
         this.loading = false;
       }
-    },
-
-    /**
-     * Carregar próxima página de tarefas
-     */
-    async loadNextPage() {
-      if (!this.pagination.hasMore || this.loading) return;
-      
-      const nextPage = this.pagination.currentPage + 1;
-      await this.fetchTasks({ 
-        page: nextPage, 
-        limit: this.pagination.itemsPerPage 
-      });
-    },
-
-    /**
-     * Carregar página específica de tarefas
-     */
-    async loadPage(page) {
-      if (page < 1 || page > this.pagination.totalPages) return;
-      
-      await this.fetchTasks({ 
-        page, 
-        limit: this.pagination.itemsPerPage 
-      });
     },
 
     /**
@@ -180,14 +133,10 @@ export const useProcessesStore = defineStore('processes', {
       this.error = null;
 
       try {
-        const response = await processService.getProcessTasks(processId);
+        const response = await taskService.getAllTasks({ processId });
         
         if (response.success) {
-          // Substituir todas as tarefas pelas do processo selecionado
-          this.tasks = (response.data || []).map(task => ({
-            ...task,
-            processId: processId
-          }));
+          this.tasks = response.data.tasks || response.data || [];
           this.updateStats();
         } else {
           this.error = response.message || 'Erro ao buscar tarefas do processo';
@@ -204,28 +153,29 @@ export const useProcessesStore = defineStore('processes', {
      * Atualizar status de uma tarefa
      */
     async updateTaskStatus(taskId, newStatus) {
-      const { showSuccess, showError } = useNotifications();
-      
       try {
         const response = await taskService.updateTaskStatus(taskId, newStatus);
         
         if (response.success) {
-          // Atualizar a tarefa na lista
+          // Atualizar a tarefa na lista local
           const taskIndex = this.tasks.findIndex(task => task.id === taskId);
           if (taskIndex !== -1) {
-            this.tasks[taskIndex] = { ...this.tasks[taskIndex], status: newStatus };
+            this.tasks[taskIndex].status = newStatus;
             this.updateStats();
           }
+          
+          const { showSuccess } = useNotifications();
           showSuccess('Status da tarefa atualizado com sucesso!');
-          return { success: true };
+          
+          return response;
         } else {
-          showError(`Erro ao atualizar tarefa: ${response.message}`);
-          return { success: false, error: response.message };
+          throw new Error(response.message || 'Erro ao atualizar status');
         }
       } catch (error) {
-        console.error(`Erro ao atualizar tarefa ${taskId}:`, error);
-        showError('Falha ao atualizar tarefa');
-        return { success: false, error: 'Falha ao atualizar tarefa' };
+        console.error(`Erro ao atualizar status da tarefa ${taskId}:`, error);
+        const { showError } = useNotifications();
+        showError('Erro ao atualizar status da tarefa');
+        throw error;
       }
     },
 
@@ -300,26 +250,10 @@ export const useProcessesStore = defineStore('processes', {
      */
     async fetchTasksInternal(params = {}) {
       try {
-        const { page = 1, limit = 20 } = params;
-        const offset = (page - 1) * limit;
-        
-        const response = await taskService.getAllTasks({ 
-          limit, 
-          offset, 
-          page
-        });
+        const response = await taskService.getAllTasks(params);
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
-          
-          // Atualizar informações de paginação
-          this.pagination = {
-            currentPage: page,
-            totalPages: Math.ceil(response.data.total / limit),
-            totalItems: response.data.total,
-            itemsPerPage: limit,
-            hasMore: response.data.hasMore || false
-          };
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
         }

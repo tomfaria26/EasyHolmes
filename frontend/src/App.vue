@@ -109,8 +109,9 @@ export default {
       }
     }
 
-    onMounted(() => {
+    onMounted(async () => {
       console.log('App montado')
+      await authStore.initAuth()
     })
 
     return {

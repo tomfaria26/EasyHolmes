@@ -10,6 +10,7 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - API_TOKEN=${API_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       - ./backend:/app
       - /app/node_modules
