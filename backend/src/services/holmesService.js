@@ -164,6 +164,96 @@ class HolmesService {
   }
 
   /**
+   * Buscar instâncias para dropdown (formato simplificado)
+   */
+  async getInstancesForDropdown() {
+    const entityId = '68597a8e0b52b4fa33e34995'; // ID da entidade das instâncias
+    const searchPayload = {
+      "query": {
+        "from": 0,
+        "size": 200,
+        "order": "asc",
+        "groups": [{
+          "match_all": true,
+          "terms": [{
+            "field": "entity_id",
+            "type": "is",
+            "value": entityId
+          }]
+        }],
+        "sort": "8547a640-504b-11f0-a2c8-75d9e0938171"
+      }
+    };
+
+    try {
+      const data = await this.getInstances(entityId, searchPayload);
+      const instances = [];
+      
+      if (data && data.docs) {
+        for (const doc of data.docs) {
+          if (doc.props && doc.props.length > 0 && doc.props[0].value) {
+            instances.push({
+              id: doc.instance_id,
+              name: doc.props[0].value
+            });
+          }
+        }
+      }
+      
+      return instances;
+    } catch (error) {
+      console.error('Erro ao buscar instâncias para dropdown:', error);
+      throw new Error('Falha ao buscar instâncias disponíveis');
+    }
+  }
+
+  /**
+   * Criar novo processo
+   */
+  async createProcess(disciplina, etapa, instanciaId) {
+    try {
+      const workflowId = '684b215594374c145b750317'; // ID do workflow
+      const startPayload = {
+        "workflow": {
+          "start_event": "StartEvent_1",
+          "property_values": [
+            {
+              "id": "f59f23f0-4aec-11f0-83f5-4dfed4731510",
+              "value": disciplina
+            },
+            {
+              "id": "f1f6dc70-4aec-11f0-83f5-4dfed4731510",
+              "value": etapa
+            }
+          ],
+          "instance_id": instanciaId,
+          "whats": "",
+          "documents": [],
+          "test": false,
+          "run_automations": true,
+          "run_triggers": true
+        }
+      };
+
+      console.log(`[DEBUG] Criando processo com payload:`, JSON.stringify(startPayload, null, 2));
+      
+      const response = await holmesClient.post(`/workflows/${workflowId}/start`, startPayload);
+      
+      // Invalidar cache de processos após criação
+      requestCache.delete('processes');
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao criar processo:', error.message);
+      if (error.response) {
+        console.error(`[DEBUG] Status code: ${error.response.status}`);
+        console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
+      }
+      throw new Error('Falha ao criar processo no Holmes');
+    }
+  }
+
+  /**
    * Buscar histórico de um processo (com cache)
    */
   async getProcessHistory(processId, historyPayload = {}) {

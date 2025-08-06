@@ -1,5 +1,6 @@
 const express = require('express');
 const processController = require('../controllers/processController');
+const taskController = require('../controllers/taskController');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -10,11 +11,17 @@ router.use(authenticateToken);
 // GET /api/processes - Buscar todos os processos
 router.get('/', processController.getProcesses);
 
-// GET /api/processes/:id - Buscar processo por ID
-router.get('/:id', processController.getProcessById);
+// GET /api/instances - Buscar instâncias disponíveis (DEVE vir antes de /:id)
+router.get('/instances', taskController.getInstances);
+
+// POST /api/processes/create - Criar novo processo
+router.post('/create', taskController.createProcess);
 
 // POST /api/processes/start - Iniciar novo processo
 router.post('/start', processController.startProcess);
+
+// GET /api/processes/:id - Buscar processo por ID
+router.get('/:id', processController.getProcessById);
 
 // GET /api/processes/:id/tasks - Buscar tarefas de um processo
 router.get('/:id/tasks', processController.getProcessTasks);

@@ -129,13 +129,13 @@ class ProcessController {
         const props = hist.properties || {};
         const taskId = props.task_id;
         
-        if (taskId && props.long_link) {
+        if (taskId) {
           if (!allTasks[taskId]) {
             allTasks[taskId] = {
               process_id: id,
               process_identifier: processIdentifier,
               task_name: props.task_name,
-              long_link: props.long_link,
+              long_link: props.long_link || null,
               task_id: taskId,
               created_at: hist.created_at || '',
               status: 'in-progress'

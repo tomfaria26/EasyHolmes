@@ -197,6 +197,22 @@ export const taskService = {
       propertyValues
     });
     return response.data;
+  },
+
+  /**
+   * Buscar instâncias disponíveis
+   */
+  async getInstances() {
+    const response = await apiClient.get('/api/processes/instances');
+    return response.data;
+  },
+
+  /**
+   * Criar novo processo
+   */
+  async createProcess(data) {
+    const response = await apiClient.post('/api/processes/create', data);
+    return response.data;
   }
 };
 

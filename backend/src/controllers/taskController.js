@@ -56,7 +56,7 @@ async function getTotalTasksCount(status = null) {
           const props = hist.properties || {};
           const taskId = props.task_id;
           
-          if (taskId && props.long_link && !processedTaskIds.has(taskId)) {
+          if (taskId && !processedTaskIds.has(taskId)) {
             // Verificar se é uma ação de conclusão
             if (hist.key === 'history.take_action') {
               const existingTask = processTasks.get(taskId);
@@ -162,13 +162,13 @@ async function getAllTasksFromAllProcesses() {
           const props = hist.properties || {};
           const taskId = props.task_id;
           
-          if (taskId && props.long_link) {
+          if (taskId) {
             if (!allTasks[taskId]) {
               allTasks[taskId] = {
                 process_id: processId,
                 process_identifier: processIdentifier,
                 task_name: props.task_name,
-                long_link: props.long_link,
+                long_link: props.long_link || null,
                 task_id: taskId,
                 created_at: hist.created_at || ''
               };
@@ -606,13 +606,13 @@ class TaskController {
         const props = hist.properties || {};
         const taskId = props.task_id;
         
-        if (taskId && props.long_link) {
+        if (taskId) {
           if (!allTasks[taskId]) {
             allTasks[taskId] = {
               process_id: processId,
               process_identifier: processIdentifier,
               task_name: props.task_name,
-              long_link: props.long_link,
+              long_link: props.long_link || null,
               task_id: taskId,
               created_at: hist.created_at || '',
               status: 'in-progress' // Status padrão
@@ -699,6 +699,58 @@ class TaskController {
     } catch (error) {
       console.error(`Erro ao buscar tarefas do processo ${processId}:`, error);
       return [];
+    }
+  }
+
+  /**
+   * Buscar instâncias disponíveis
+   * GET /api/instances
+   */
+  async getInstances(req, res) {
+    try {
+      const instances = await holmesService.getInstancesForDropdown();
+      
+      res.json({
+        success: true,
+        data: instances
+      });
+    } catch (error) {
+      console.error('Erro ao buscar instâncias:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar novo processo
+   * POST /api/processes/create
+   */
+  async createProcess(req, res) {
+    try {
+      const { disciplina, etapa, instancia } = req.body;
+      
+      if (!disciplina || !etapa || !instancia) {
+        return res.status(400).json({
+          error: 'Campos obrigatórios',
+          message: 'Disciplina, etapa e instância são obrigatórios'
+        });
+      }
+
+      const result = await holmesService.createProcess(disciplina, etapa, instancia);
+      
+      res.json({
+        success: true,
+        message: 'Processo criado com sucesso',
+        data: result
+      });
+    } catch (error) {
+      console.error('Erro ao criar processo:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
     }
   }
 }

@@ -20,8 +20,8 @@
             </svg>
             Atualizar
           </button>
-          <button class="btn btn-primary">
-            Nova Tarefa
+          <button @click="openNewProcessModal" class="btn btn-primary">
+            Novo Processo
           </button>
           
 
@@ -273,23 +273,6 @@
                 >
                   <div class="flex justify-between items-start mb-2">
                     <h5 class="font-medium text-gray-900 text-sm flex-1 mr-2">{{ task.name || 'Tarefa sem nome' }}</h5>
-                    <button
-                      @click.stop="reopenTask(task)"
-                      :disabled="updatingTasks.includes(task.id)"
-                      class="text-gray-600 hover:text-gray-800 text-xs disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                      title="Reabrir Tarefa"
-                    >
-                      <svg v-if="updatingTasks.includes(task.id)" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span v-else class="flex items-center">
-                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Reabrir
-                      </span>
-                    </button>
                   </div>
                   <div class="flex justify-between items-center text-xs">
                     <span class="text-gray-500 flex items-center">
@@ -509,6 +492,115 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Novo Processo -->
+    <div v-if="showNewProcessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <!-- Header do Modal -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <div class="flex items-center">
+            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">
+              Novo Processo
+            </h3>
+          </div>
+          <button
+            @click="closeNewProcessModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Conteúdo do Modal -->
+        <div class="p-6">
+          <form @submit.prevent="createNewProcess" class="space-y-4">
+            <!-- Disciplina -->
+            <div>
+              <label for="disciplina" class="block text-sm font-medium text-gray-700 mb-1">
+                Disciplina *
+              </label>
+              <input
+                id="disciplina"
+                v-model="newProcessForm.disciplina"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Ex: ARQ, EST, HID, HIN..."
+              />
+            </div>
+
+            <!-- Etapa -->
+            <div>
+              <label for="etapa" class="block text-sm font-medium text-gray-700 mb-1">
+                Etapa *
+              </label>
+              <input
+                id="etapa"
+                v-model="newProcessForm.etapa"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Ex: EP, PB, PR, PE..."
+              />
+            </div>
+
+            <!-- Instância -->
+            <div>
+              <label for="instancia" class="block text-sm font-medium text-gray-700 mb-1">
+                Instância *
+              </label>
+              <select
+                id="instancia"
+                v-model="newProcessForm.instancia"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                :disabled="loadingInstances"
+              >
+                <option value="">Selecione uma instância</option>
+                <option
+                  v-for="instance in instances"
+                  :key="instance.id"
+                  :value="instance.id"
+                >
+                  {{ instance.name }}
+                </option>
+              </select>
+              <div v-if="loadingInstances" class="mt-1 text-sm text-gray-500">
+                Carregando instâncias...
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex justify-end space-x-3 p-6 border-t border-gray-200">
+          <button
+            @click="closeNewProcessModal"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Cancelar
+          </button>
+          <button
+            @click="createNewProcess"
+            :disabled="creatingProcess || !newProcessForm.disciplina.trim() || !newProcessForm.etapa.trim() || !newProcessForm.instancia"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            <svg v-if="creatingProcess" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ creatingProcess ? 'Criando...' : 'Criar Processo' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -550,6 +642,17 @@ export default {
     // Propriedades da tarefa
     const taskProperties = ref([])
     const selectedPropertyValues = ref({})
+
+    // Estado do modal de novo processo
+    const showNewProcessModal = ref(false)
+    const newProcessForm = ref({
+      disciplina: '',
+      etapa: '',
+      instancia: ''
+    })
+    const instances = ref([])
+    const loadingInstances = ref(false)
+    const creatingProcess = ref(false)
 
     // Usar sistema de notificações global
     const { showSuccess, showError, showInfo } = useNotifications()
@@ -905,6 +1008,70 @@ export default {
       selectedPropertyValues.value = {}
     }
 
+    // Funções do modal de novo processo
+    const openNewProcessModal = async () => {
+      showNewProcessModal.value = true
+      await loadInstances()
+    }
+
+    const closeNewProcessModal = () => {
+      showNewProcessModal.value = false
+      newProcessForm.value = {
+        disciplina: '',
+        etapa: '',
+        instancia: ''
+      }
+    }
+
+    const loadInstances = async () => {
+      loadingInstances.value = true
+      try {
+        const response = await taskService.getInstances()
+        if (response.success) {
+          instances.value = response.data || []
+        } else {
+          showError('Erro ao carregar instâncias')
+        }
+      } catch (error) {
+        console.error('Erro ao carregar instâncias:', error)
+        showError('Erro ao carregar instâncias')
+      } finally {
+        loadingInstances.value = false
+      }
+    }
+
+    const createNewProcess = async () => {
+      if (!newProcessForm.value.disciplina.trim() || 
+          !newProcessForm.value.etapa.trim() || 
+          !newProcessForm.value.instancia) {
+        showError('Todos os campos são obrigatórios')
+        return
+      }
+
+      creatingProcess.value = true
+      try {
+        const response = await taskService.createProcess({
+          disciplina: newProcessForm.value.disciplina,
+          etapa: newProcessForm.value.etapa,
+          instancia: newProcessForm.value.instancia
+        })
+        
+        if (response.success) {
+          showSuccess('Processo criado com sucesso!')
+          closeNewProcessModal()
+          // Atualizar dados após criação
+          await processesStore.fetchTasks()
+        } else {
+          showError(`Erro ao criar processo: ${response.error}`)
+        }
+      } catch (error) {
+        console.error('Erro ao criar processo:', error)
+        showError('Erro ao criar processo. Verifique o console para mais detalhes.')
+      } finally {
+        creatingProcess.value = false
+      }
+    }
+
 
 
     const completeTask = async () => {
@@ -979,28 +1146,7 @@ export default {
       }
     }
 
-    const reopenTask = async (task) => {
-      // Adicionar task ao loading state
-      updatingTasks.value.push(task.id)
-      
-      try {
-        const result = await processesStore.updateTaskStatus(task.id, 'in-progress')
-        if (result.success) {
-          // Atualizar dados após mudança de status
-          await processesStore.fetchTasks()
-        } else {
-          console.error('Erro ao reabrir tarefa:', result.error)
-        }
-      } catch (error) {
-        console.error('Erro ao reabrir tarefa:', error)
-      } finally {
-        // Remover task do loading state
-        const index = updatingTasks.value.indexOf(task.id)
-        if (index > -1) {
-          updatingTasks.value.splice(index, 1)
-        }
-      }
-    }
+
 
     const getProcessName = (processId) => {
       const process = processes.value.find(p => p.id === processId)
@@ -1098,6 +1244,11 @@ export default {
       selectedTask,
       taskProperties,
       selectedPropertyValues,
+      showNewProcessModal,
+      newProcessForm,
+      instances,
+      loadingInstances,
+      creatingProcess,
       refreshData,
       filterByProcess,
       addTag,
@@ -1115,7 +1266,9 @@ export default {
       openTaskDetails,
       closeTaskModal,
       completeTask,
-      reopenTask,
+      openNewProcessModal,
+      closeNewProcessModal,
+      createNewProcess,
       getProcessName,
       formatDate,
       getSlaColor
