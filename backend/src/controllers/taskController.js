@@ -425,13 +425,17 @@ class TaskController {
   async completeTask(req, res) {
     try {
       const { id } = req.params;
-      const { propertyValues = [] } = req.body;
+      const { propertyValues = [], actionId } = req.body;
       
       // Buscar detalhes da tarefa para obter as ações disponíveis
       const taskDetails = await holmesService.getTaskDetails(id);
       
       // Extrair o ID do botão de ação "Ok"
-      const okActionId = extractOkActionId(taskDetails);
+      let okActionId = actionId;
+      
+      if (!okActionId) {
+        okActionId = extractOkActionId(taskDetails);
+      }
       
       if (!okActionId) {
         return res.status(400).json({
@@ -449,25 +453,15 @@ class TaskController {
         data: {
           taskId: id,
           actionId: okActionId,
-          propertyValues: propertyValues,
-          result: result
+          result
         }
       });
     } catch (error) {
       console.error(`Erro ao concluir tarefa ${req.params.id}:`, error);
-      
-      // Verificar se é um erro de permissão
-      if (error.message.includes('não está atribuída ao seu usuário')) {
-        res.status(403).json({
-          error: 'Erro de permissão',
-          message: error.message
-        });
-      } else {
-        res.status(500).json({
-          error: 'Erro interno do servidor',
-          message: error.message
-        });
-      }
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
     }
   }
 

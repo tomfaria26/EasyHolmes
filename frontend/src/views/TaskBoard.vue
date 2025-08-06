@@ -306,7 +306,7 @@
     </div>
 
     <!-- Modal de Detalhes da Tarefa -->
-    <div v-if="showTaskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showTaskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen w-screen" style="margin: 0; padding: 0;">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <!-- Header do Modal -->
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
@@ -494,7 +494,7 @@
     </div>
 
     <!-- Modal de Novo Processo -->
-    <div v-if="showNewProcessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showNewProcessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen w-screen" style="margin: 0; padding: 0;">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <!-- Header do Modal -->
         <div class="flex items-center justify-between p-6 border-b border-gray-200">

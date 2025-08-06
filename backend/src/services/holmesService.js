@@ -20,7 +20,7 @@ const CACHE_TTL = {
  */
 const holmesClient = axios.create({
   baseURL: process.env.HOLMES_API_BASE_URL || 'https://app-api.holmesdoc.io/v1',
-  timeout: 60000, // Aumentado para 60 segundos
+  timeout: 90000, // Aumentado para 90 segundos
   headers: {
     'Content-Type': 'application/json',
     'api_token': process.env.API_TOKEN
