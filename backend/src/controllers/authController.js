@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const holmesService = require('../services/holmesService');
+const User = require('../models/User');
 
 /**
  * Controlador de autenticação
@@ -24,37 +25,26 @@ class AuthController {
 
       const { email, password } = req.body;
 
-      // Por enquanto, vamos usar credenciais fixas para demonstração
-      // Em produção, isso viria do banco de dados
-      const validCredentials = {
-        email: 'admin@easyholmes.com',
-        password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi' // "password"
-      };
-
-      // Também aceitar admin123 para facilitar os testes
-      const testCredentials = {
-        email: 'admin@easyholmes.com',
-        password: 'admin123'
-      };
-
-      // Verificar se o email existe
-      if (email !== validCredentials.email) {
+      // Buscar usuário no banco de dados
+      const user = await User.findByEmail(email);
+      
+      if (!user) {
         return res.status(401).json({
           error: 'Credenciais inválidas',
           message: 'Email ou senha incorretos'
         });
       }
 
-      // Verificar senha (aceitar tanto "password" quanto "admin123")
-      let isValidPassword = false;
-      
-      // Tentar com a senha hashada
-      isValidPassword = await bcrypt.compare(password, validCredentials.password);
-      
-      // Se não funcionou, tentar com admin123
-      if (!isValidPassword && password === 'admin123') {
-        isValidPassword = true;
+      // Verificar se o usuário está ativo
+      if (!user.is_active) {
+        return res.status(401).json({
+          error: 'Usuário inativo',
+          message: 'Sua conta foi desativada. Entre em contato com o administrador.'
+        });
       }
+
+      // Verificar senha
+      const isValidPassword = await User.verifyPassword(email, password);
       
       if (!isValidPassword) {
         return res.status(401).json({
@@ -66,9 +56,9 @@ class AuthController {
       // Gerar token JWT
       const token = jwt.sign(
         {
-          userId: 'admin-user-id',
-          email: email,
-          role: 'admin'
+          userId: user.id,
+          email: user.email,
+          role: user.role
         },
         process.env.JWT_SECRET || 'easyholmes-secret-key',
         { expiresIn: '24h' }
@@ -81,10 +71,10 @@ class AuthController {
         data: {
           token,
           user: {
-            id: 'admin-user-id',
-            email: email,
-            role: 'admin',
-            name: 'Administrador'
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            name: user.name
           }
         }
       });

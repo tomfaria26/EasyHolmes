@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const Login = () => import('../views/Login.vue')
 const Dashboard = () => import('../views/Dashboard.vue')
 const TaskBoard = () => import('../views/TaskBoard.vue')
+const UserManagement = () => import('../views/UserManagement.vue')
 
 const routes = [
   {
@@ -29,6 +30,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/users',
+    name: 'UserManagement',
+    component: UserManagement,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/dashboard'
   }
@@ -42,9 +49,12 @@ const router = createRouter({
 // Guarda de navegação para autenticação
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('auth_token')
+  const user = JSON.parse(localStorage.getItem('user') || 'null')
 
   if (to.meta.requiresAuth && !token) {
     next('/login')
+  } else if (to.meta.requiresAdmin && user?.role !== 'admin') {
+    next('/dashboard')
   } else if (to.path === '/login' && token) {
     next('/dashboard')
   } else {

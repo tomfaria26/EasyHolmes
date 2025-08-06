@@ -9,6 +9,7 @@ require('dotenv').config();
 const authRoutes = require('./src/routes/auth');
 const processRoutes = require('./src/routes/processes');
 const taskRoutes = require('./src/routes/tasks');
+const userRoutes = require('./src/routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/processes', processRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {

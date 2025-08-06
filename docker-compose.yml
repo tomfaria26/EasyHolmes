@@ -11,6 +11,11 @@ services:
       - PORT=3000
       - API_TOKEN=${API_TOKEN}
       - JWT_SECRET=${JWT_SECRET}
+      - DB_HOST=easyholmes-database
+      - DB_PORT=5432
+      - DB_NAME=easyholmes
+      - DB_USER=easyholmes
+      - DB_PASSWORD=easyholmes123
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -38,15 +43,21 @@ services:
       - easyholmes-network
 
   database:
-    image: alpine:latest
+    image: postgres:15-alpine
     container_name: easyholmes-database
+    environment:
+      - POSTGRES_DB=easyholmes
+      - POSTGRES_USER=easyholmes
+      - POSTGRES_PASSWORD=easyholmes123
+    ports:
+      - "5432:5432"
     volumes:
-      - sqlite_data:/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - easyholmes-network
 
 volumes:
-  sqlite_data:
+  postgres_data:
 
 networks:
   easyholmes-network:

@@ -117,12 +117,21 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium text-gray-900">Processos Recentes</h3>
-        <router-link
-          to="/tasks"
-          class="btn btn-primary"
-        >
-          Ver Todas as Tarefas
-        </router-link>
+        <div class="flex space-x-3">
+          <router-link
+            to="/tasks"
+            class="btn btn-primary"
+          >
+            Ver Todas as Tarefas
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/users"
+            class="btn btn-secondary"
+          >
+            Gerenciar Usuários
+          </router-link>
+        </div>
       </div>
       
       <div v-if="loading" class="text-center py-8">
@@ -173,18 +182,21 @@
 <script>
 import { computed, onMounted } from 'vue'
 import { useProcessesStore } from '../stores/processes'
+import { useAuthStore } from '../stores/auth'
 import { useNotifications } from '../composables/useNotifications'
 
 export default {
   name: 'Dashboard',
   setup() {
     const processesStore = useProcessesStore()
+    const authStore = useAuthStore()
     const { showSuccess, showError } = useNotifications()
 
     const loading = computed(() => processesStore.loading)
     const error = computed(() => processesStore.error)
     const stats = computed(() => processesStore.stats)
     const processes = computed(() => processesStore.processes)
+    const isAdmin = computed(() => authStore.user?.role === 'admin')
 
     const refreshData = async () => {
       try {
@@ -239,6 +251,7 @@ export default {
       error,
       stats,
       processes,
+      isAdmin,
       refreshData,
       selectProcess,
       getProcessTasksCount,

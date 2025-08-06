@@ -144,6 +144,59 @@ export const processService = {
 };
 
 /**
+ * Serviço de usuários
+ */
+export const userService = {
+  /**
+   * Buscar todos os usuários
+   */
+  async getAllUsers() {
+    const response = await apiClient.get('/api/users');
+    return response.data;
+  },
+
+  /**
+   * Buscar usuário por ID
+   */
+  async getUserById(id) {
+    const response = await apiClient.get(`/api/users/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Criar novo usuário
+   */
+  async createUser(userData) {
+    const response = await apiClient.post('/api/users', userData);
+    return response.data;
+  },
+
+  /**
+   * Atualizar usuário
+   */
+  async updateUser(id, userData) {
+    const response = await apiClient.put(`/api/users/${id}`, userData);
+    return response.data;
+  },
+
+  /**
+   * Deletar usuário
+   */
+  async deleteUser(id) {
+    const response = await apiClient.delete(`/api/users/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Alterar senha do usuário
+   */
+  async changePassword(id, passwordData) {
+    const response = await apiClient.post(`/api/users/${id}/change-password`, passwordData);
+    return response.data;
+  }
+};
+
+/**
  * Serviço de tarefas
  */
 export const taskService = {

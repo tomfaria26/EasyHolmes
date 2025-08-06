@@ -1,7 +1,7 @@
 <template>
   <div id="app">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
+    <!-- Header - apenas quando não estiver na página de login -->
+    <header v-if="!isLoginPage" class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <!-- Logo/Título -->
@@ -25,6 +25,14 @@
             >
               Tarefas
             </router-link>
+            <router-link 
+              v-if="user?.role === 'admin'"
+              to="/users" 
+              class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              active-class="text-blue-600 bg-blue-50"
+            >
+              Usuários
+            </router-link>
           </nav>
 
           <!-- Informações do usuário -->
@@ -47,10 +55,11 @@
     </header>
 
     <!-- Conteúdo principal -->
-    <main class="flex-1">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main :class="isLoginPage ? 'flex-1' : 'flex-1'">
+      <div v-if="!isLoginPage" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <router-view />
       </div>
+      <router-view v-else />
     </main>
 
     <!-- Loading overlay -->
@@ -71,7 +80,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import NotificationToast from './components/NotificationToast.vue'
 
@@ -82,10 +91,13 @@ export default {
   },
   setup() {
     const router = useRouter()
+    const route = useRoute()
     const authStore = useAuthStore()
     const loading = ref(false)
 
     const user = computed(() => authStore.user)
+    
+    const isLoginPage = computed(() => route.path === '/login')
     
     const userInitials = computed(() => {
       if (!user.value || !user.value.name) return 'U'
@@ -118,6 +130,7 @@ export default {
       user,
       userInitials,
       loading,
+      isLoginPage,
       logout
     }
   }
