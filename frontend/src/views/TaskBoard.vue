@@ -655,7 +655,7 @@ export default {
     const creatingProcess = ref(false)
 
     // Usar sistema de notificações global
-    const { showSuccess, showError, showInfo } = useNotifications()
+    const { showSuccess, showError } = useNotifications()
 
 
     const error = computed(() => processesStore.error)

@@ -5,6 +5,7 @@ const Login = () => import('../views/Login.vue')
 const Dashboard = () => import('../views/Dashboard.vue')
 const TaskBoard = () => import('../views/TaskBoard.vue')
 const UserManagement = () => import('../views/UserManagement.vue')
+const ProcessDetail = () => import('../views/ProcessDetail.vue')
 
 const routes = [
   {
@@ -34,6 +35,12 @@ const routes = [
     name: 'UserManagement',
     component: UserManagement,
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/process/:id',
+    name: 'ProcessDetail',
+    component: ProcessDetail,
+    meta: { requiresAuth: true }
   },
   {
     path: '/:pathMatch(.*)*',

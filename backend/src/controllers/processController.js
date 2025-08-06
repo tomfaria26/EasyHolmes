@@ -22,9 +22,18 @@ class ProcessController {
         status: r70HinPrProcess.status
       } : 'NÃO ENCONTRADO');
       
+      // Filtrar apenas processos ativos (não cancelados) e adicionar descrição
+      const filteredProcesses = processesList
+        .filter(process => process.status !== "canceled")
+        .map(process => ({
+          ...process,
+          description: process.description || `Processo ${process.identifier || process.name}`,
+          displayName: process.identifier || process.name
+        }));
+      
       res.json({
         success: true,
-        data: { processes: processesList.filter(process => process.name === "Auditoria BIM" && process.status !== "canceled") }
+        data: { processes: filteredProcesses }
       });
     } catch (error) {
       console.error('Erro ao buscar processos:', error);

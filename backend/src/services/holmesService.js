@@ -310,15 +310,177 @@ class HolmesService {
   }
 
   /**
+   * Gerar XML BPMN a partir dos dados do processo
+   */
+  generateBpmnXml(processData, tasks = []) {
+    const processId = processData.id || 'Process_1';
+    const processName = processData.name || 'Processo';
+    
+    // Criar elementos BPMN baseados nas tarefas
+    let taskElements = '';
+    let flowElements = '';
+    let currentFlowId = 1;
+    
+    // Adicionar start event
+    taskElements += `
+    <bpmn:startEvent id="StartEvent_1" name="Início">
+      <bpmn:outgoing>Flow_${currentFlowId}</bpmn:outgoing>
+    </bpmn:startEvent>`;
+    
+    // Adicionar tarefas
+    tasks.forEach((task, index) => {
+      const taskId = `Task_${index + 1}`;
+      const taskName = task.name || task.task_name || `Tarefa ${index + 1}`;
+      const status = task.status || 'pending';
+      
+      taskElements += `
+    <bpmn:task id="${taskId}" name="${taskName}">
+      <bpmn:incoming>Flow_${currentFlowId}</bpmn:incoming>
+      <bpmn:outgoing>Flow_${currentFlowId + 1}</bpmn:outgoing>
+    </bpmn:task>`;
+      
+      flowElements += `
+    <bpmn:sequenceFlow id="Flow_${currentFlowId}" sourceRef="${index === 0 ? 'StartEvent_1' : `Task_${index}`}" targetRef="${taskId}" />`;
+      
+      currentFlowId++;
+    });
+    
+    // Adicionar end event se houver tarefas
+    if (tasks.length > 0) {
+      taskElements += `
+    <bpmn:endEvent id="EndEvent_1" name="Fim">
+      <bpmn:incoming>Flow_${currentFlowId}</bpmn:incoming>
+    </bpmn:endEvent>`;
+      
+      flowElements += `
+    <bpmn:sequenceFlow id="Flow_${currentFlowId}" sourceRef="Task_${tasks.length}" targetRef="EndEvent_1" />`;
+    } else {
+      // Se não há tarefas, conectar start diretamente ao end
+      taskElements += `
+    <bpmn:endEvent id="EndEvent_1" name="Fim">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+    </bpmn:endEvent>`;
+      
+      flowElements += `
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="EndEvent_1" />`;
+    }
+    
+    // Gerar XML BPMN completo
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="${processId}" name="${processName}" isExecutable="false">
+    ${taskElements}
+    ${flowElements}
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="${processId}">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="145" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>`;
+    
+    // Adicionar elementos visuais para tarefas
+    let xPosition = 250;
+    tasks.forEach((task, index) => {
+      const taskId = `Task_${index + 1}`;
+      xml += `
+      <bpmndi:BPMNShape id="${taskId}_di" bpmnElement="${taskId}">
+        <dc:Bounds x="${xPosition}" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="${xPosition + 10}" y="115" width="80" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>`;
+      xPosition += 150;
+    });
+    
+    // Adicionar end event visual
+    xml += `
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="${xPosition}" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="${xPosition + 6}" y="145" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>`;
+    
+    // Adicionar flows visuais
+    let flowXPosition = 188;
+    tasks.forEach((task, index) => {
+      xml += `
+      <bpmndi:BPMNEdge id="Flow_${index + 1}_di" bpmnElement="Flow_${index + 1}">
+        <di:waypoint x="${flowXPosition}" y="120" />
+        <di:waypoint x="${flowXPosition + 62}" y="120" />
+      </bpmndi:BPMNEdge>`;
+      flowXPosition += 150;
+    });
+    
+    // Adicionar último flow se houver tarefas
+    if (tasks.length > 0) {
+      xml += `
+      <bpmndi:BPMNEdge id="Flow_${tasks.length + 1}_di" bpmnElement="Flow_${tasks.length + 1}">
+        <di:waypoint x="${flowXPosition}" y="120" />
+        <di:waypoint x="${flowXPosition + 62}" y="120" />
+      </bpmndi:BPMNEdge>`;
+    } else {
+      xml += `
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="250" y="120" />
+      </bpmndi:BPMNEdge>`;
+    }
+    
+    xml += `
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+    
+    return xml;
+  }
+
+  /**
    * Buscar template BPMN de um processo (com cache)
    */
   async getProcessTemplate(processId) {
     return cachedRequest(`template_${processId}`, async () => {
       try {
+        console.log(`[DEBUG] Buscando template para processo ${processId}`)
         const response = await holmesClient.get(
           `/admin/processes/${processId}/troubleshooting/template`
         );
-        return response.data;
+        console.log(`[DEBUG] Resposta da API Holmes para template:`, {
+          status: response.status,
+          dataType: typeof response.data,
+          dataKeys: response.data ? Object.keys(response.data) : 'null/undefined',
+          dataPreview: response.data ? JSON.stringify(response.data).substring(0, 500) + '...' : 'null/undefined'
+        })
+        
+        // Verificar se a resposta contém o XML
+        if (response.data && response.data.xml) {
+          console.log(`[DEBUG] XML encontrado, tamanho: ${response.data.xml.length}`)
+          return response.data.xml;
+        } else if (response.data && typeof response.data === 'string') {
+          console.log(`[DEBUG] Resposta é string direta, tamanho: ${response.data.length}`)
+          return response.data;
+        } else {
+          // Gerar XML BPMN a partir dos dados do processo
+          console.log(`[DEBUG] Gerando XML BPMN a partir dos dados do processo`)
+          
+          // Buscar tarefas do processo para incluir no XML
+          let tasks = [];
+          try {
+            const tasksResponse = await this.getProcessTasks(processId);
+            if (tasksResponse && Array.isArray(tasksResponse)) {
+              tasks = tasksResponse;
+            }
+          } catch (error) {
+            console.log(`[DEBUG] Erro ao buscar tarefas: ${error.message}`)
+          }
+          
+          const generatedXml = this.generateBpmnXml(response.data, tasks);
+          console.log(`[DEBUG] XML gerado com sucesso, tamanho: ${generatedXml.length}`)
+          return generatedXml;
+        }
       } catch (error) {
         console.error(`Erro ao buscar template do processo ${processId}:`, error.message);
         throw new Error('Falha ao buscar template BPMN do processo');
