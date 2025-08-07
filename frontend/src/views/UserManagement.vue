@@ -793,8 +793,10 @@ export default {
     const validateName = () => {
       if (!userForm.name.trim()) {
         nameError.value = 'Nome é obrigatório';
+        return false;
       } else {
         nameError.value = '';
+        return true;
       }
     };
 
@@ -803,10 +805,13 @@ export default {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!userForm.email.trim()) {
         emailError.value = 'Email é obrigatório';
+        return false;
       } else if (!emailRegex.test(userForm.email)) {
         emailError.value = 'Formato de email inválido';
+        return false;
       } else {
         emailError.value = '';
+        return true;
       }
     };
 
@@ -814,8 +819,10 @@ export default {
     const validatePassword = () => {
       if (showCreateModal.value && !userForm.password.trim()) {
         passwordError.value = 'Senha é obrigatória para novos usuários';
+        return false;
       } else if (userForm.password && userForm.password.length < 6) {
         passwordError.value = 'A senha deve ter pelo menos 6 caracteres';
+        return false;
       } else {
         passwordError.value = '';
       }
@@ -958,6 +965,15 @@ export default {
       
       clearFeedback();
       showEditModal.value = true;
+    };
+
+    // Save user (create or update)
+    const saveUser = async () => {
+      if (showCreateModal.value) {
+        await createUser();
+      } else {
+        await updateUser();
+      }
     };
 
     // Update user
@@ -1133,6 +1149,7 @@ export default {
       showDeleteModal,
       showCriticalChangesModal,
       userToDelete,
+      userToEdit,
       userForm,
       sortField,
       sortDirection,
@@ -1147,6 +1164,7 @@ export default {
       getStatusTooltip,
       createUser,
       editUser,
+      saveUser,
       updateUser,
       confirmCriticalChange,
       cancelCriticalChange,

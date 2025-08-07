@@ -301,6 +301,7 @@ class UserController {
       // Se não for admin, verificar a senha atual
       if (req.user.role !== 'admin') {
         const isValidPassword = await User.verifyPassword(existingUser.email, currentPassword);
+        
         if (!isValidPassword) {
           return res.status(400).json({
             error: 'Senha atual incorreta',

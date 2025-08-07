@@ -253,9 +253,10 @@
               Cancelar
             </button>
             <button
-              @click="saveProfile"
+              @click="() => { console.log('[DEBUG] Botão clicado!'); saveProfile(); }"
               type="button"
               :disabled="profileNameError || profilePasswordError || profileCurrentPasswordError || isProfileSubmitting"
+              @mouseenter="() => console.log('[DEBUG] Estado do botão:', { profileNameError, profilePasswordError, profileCurrentPasswordError, isProfileSubmitting })"
               class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               <span v-if="isProfileSubmitting" class="flex items-center">
@@ -376,10 +377,18 @@ export default {
     }
 
     const validateProfileCurrentPassword = () => {
-      if (profileForm.value.currentPassword && profileForm.value.currentPassword.length < 6) {
-        profileCurrentPasswordError.value = 'Senha atual deve ter pelo menos 6 caracteres'
-        return false
+      // Só validar se uma nova senha foi fornecida
+      if (profileForm.value.password) {
+        if (!profileForm.value.currentPassword) {
+          profileCurrentPasswordError.value = 'Senha atual é obrigatória quando alterando a senha'
+          return false
+        }
+        if (profileForm.value.currentPassword.length < 6) {
+          profileCurrentPasswordError.value = 'Senha atual deve ter pelo menos 6 caracteres'
+          return false
+        }
       }
+      
       profileCurrentPasswordError.value = ''
       return true
     }

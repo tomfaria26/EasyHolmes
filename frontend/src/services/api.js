@@ -4,7 +4,7 @@ import axios from 'axios';
  * Cliente HTTP para APIs do backend
  */
 const apiClient = axios.create({
-  baseURL: process.env.VUE_APP_API_URL || 'http://localhost:3000',
+  baseURL: process.env.VUE_APP_API_URL || 'http://localhost:3001',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
