@@ -1,7 +1,36 @@
 <template>
   <div class="space-y-6">
-    <!-- Header do Processo -->
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center py-12">
+      <div class="text-center">
+        <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-gray-600">Carregando dados do processo...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div class="flex items-center">
+        <svg class="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <h3 class="text-lg font-medium text-red-800">Erro ao carregar dados</h3>
+          <p class="text-red-600">{{ error }}</p>
+        </div>
+      </div>
+      <button @click="loadProcessData" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+        Tentar novamente
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div v-else>
+      <!-- Cabeçalho do Processo -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
       <div class="flex justify-between items-start">
         <div>
           <div class="flex items-center space-x-3 mb-2">
@@ -10,13 +39,12 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h1 class="text-2xl font-bold">{{ process?.displayName || process?.name || 'Processo' }}</h1>
+            <h1 class="text-2xl font-bold">{{ process?.displayName || process?.name || 'Auditoria BIM-R181-ARQ-EP' }}</h1>
           </div>
-          <p class="text-blue-100">{{ process?.description || 'Sem descrição disponível' }}</p>
           <div class="flex items-center space-x-4 mt-3">
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-white bg-opacity-20">
               <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-              {{ getStatusText(process?.status) }}
+              {{ getStatusText(process?.status) || 'opened' }}
             </span>
             <span class="text-blue-100 text-sm">
               Criado em {{ formatDate(process?.created_at) }}
@@ -36,62 +64,15 @@
       </div>
     </div>
 
-    <!-- Cards de Estatísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-gray-500">Total de Tarefas</p>
-            <p class="text-xl font-bold text-gray-900">{{ allTasks.length }}</p>
-          </div>
-        </div>
+    <!-- Cartões de Resumo Simplificados -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-lg shadow p-6 text-center">
+        <div class="text-3xl font-bold text-gray-900 mb-2">{{ allTasks.length }}</div>
+        <div class="text-sm text-gray-500">Total de Tarefas</div>
       </div>
-
-      <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-gray-500">Concluídas</p>
-            <p class="text-xl font-bold text-gray-900">{{ completedTasks.length }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-gray-500">Pendentes</p>
-            <p class="text-xl font-bold text-gray-900">{{ pendingTasks.length }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow p-4">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-gray-500">Em Andamento</p>
-            <p class="text-xl font-bold text-gray-900">{{ inProgressTasks.length }}</p>
-          </div>
-        </div>
+      <div class="bg-white rounded-lg shadow p-6 text-center">
+        <div class="text-3xl font-bold text-gray-900 mb-2">{{ completedTasks.length }}</div>
+        <div class="text-sm text-gray-500">Tarefas Concluídas</div>
       </div>
     </div>
 
@@ -124,14 +105,6 @@
             <h3 class="text-lg font-medium text-gray-900 mb-3">Informações do Processo</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p class="text-sm text-gray-500">Identificador</p>
-                <p class="font-medium">{{ process?.identifier || 'N/A' }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-500">Status</p>
-                <p class="font-medium">{{ getStatusText(process?.status) }}</p>
-              </div>
-              <div>
                 <p class="text-sm text-gray-500">Data de Criação</p>
                 <p class="font-medium">{{ formatDate(process?.created_at) }}</p>
               </div>
@@ -142,12 +115,32 @@
             </div>
           </div>
 
+          <!-- Filtros de Status -->
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Filtrar por Status</h3>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="filter in statusFilters"
+                :key="filter.value"
+                @click="selectedStatusFilter = filter.value"
+                :class="[
+                  'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                  selectedStatusFilter === filter.value
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ]"
+              >
+                {{ filter.label }}
+              </button>
+            </div>
+          </div>
+
           <!-- Lista de Tarefas -->
           <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Tarefas do Processo</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Lista de Tarefas</h3>
             <div class="space-y-3">
               <div
-                v-for="task in allTasks"
+                v-for="task in filteredTasks"
                 :key="task.id"
                 class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
@@ -160,9 +153,29 @@
                       'bg-orange-500': task.status === 'in-progress'
                     }"
                   ></div>
-                  <div>
+                  <div class="flex-1">
                     <h4 class="font-medium text-gray-900">{{ task.name }}</h4>
                     <p class="text-sm text-gray-500">{{ task.description || 'Sem descrição' }}</p>
+                    <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        {{ formatDate(task.due_date) || 'Sem vencimento' }}
+                      </span>
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        {{ task.assignee || 'Não atribuído' }}
+                      </span>
+                      <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        {{ getPriorityText(task.priority) }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div class="text-right">
@@ -182,7 +195,7 @@
           </div>
         </div>
 
-        <!-- Tab: Diagrama BPMN -->
+        <!-- Tab: Fluxo do Processo -->
         <div v-if="activeTab === 'bpmn'" class="space-y-4">
           <div class="flex justify-between items-center">
             <h3 class="text-lg font-medium text-gray-900">Diagrama do Processo</h3>
@@ -202,153 +215,68 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                 </svg>
               </button>
-              <button @click="resetView" class="btn btn-secondary text-sm" title="Resetar visualização">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-              </button>
             </div>
           </div>
-
-          <!-- Instruções de uso -->
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <div class="text-sm text-blue-800">
-                <p class="font-medium mb-1">Como usar o diagrama:</p>
-                <ul class="space-y-1 text-xs">
-                  <li>• <strong>Zoom:</strong> Use a roda do mouse ou os botões acima</li>
-                  <li>• <strong>Pan (mover):</strong> Clique e arraste com o botão esquerdo do mouse</li>
-                  <li>• <strong>Selecionar:</strong> Clique em qualquer elemento do diagrama</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <!-- Container do BPMN -->
-          <div class="bg-gray-50 rounded-lg border-2 border-gray-200 relative" style="height: 600px;">
-            <div v-if="bpmnLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
-              <div class="text-center">
-                <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p class="mt-2 text-gray-600">Carregando diagrama...</p>
-              </div>
-            </div>
-            <div id="bpmn-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
-          </div>
-
-          <!-- Legenda -->
-          <div class="bg-white rounded-lg border p-4">
-            <h4 class="font-medium text-gray-900 mb-3">Legenda</h4>
-            <div class="flex space-x-6">
-              <div class="flex items-center">
-                <div class="w-4 h-4 bg-green-500 rounded mr-2"></div>
-                <span class="text-sm text-gray-600">Concluído</span>
-              </div>
-              <div class="flex items-center">
-                <div class="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
-                <span class="text-sm text-gray-600">Pendente</span>
-              </div>
-              <div class="flex items-center">
-                <div class="w-4 h-4 bg-orange-500 rounded mr-2"></div>
-                <span class="text-sm text-gray-600">Em Andamento</span>
-              </div>
-            </div>
-          </div>
+          <div id="bpmn-container" class="border border-gray-200 rounded-lg" style="height: 500px;"></div>
         </div>
 
-        <!-- Tab: Atividades -->
-        <div v-if="activeTab === 'activities'" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Tarefas Pendentes -->
-            <div class="bg-yellow-50 rounded-lg p-4">
-              <h4 class="font-medium text-yellow-900 mb-3 flex items-center">
-                <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                Tarefas Pendentes
-              </h4>
-              <div class="space-y-2">
-                <div
-                  v-for="task in pendingTasks"
-                  :key="task.id"
-                  class="bg-white rounded p-3 border border-yellow-200"
-                >
-                  <h5 class="font-medium text-gray-900">{{ task.name }}</h5>
-                  <p class="text-sm text-gray-600">{{ task.description || 'Sem descrição' }}</p>
-                </div>
-                <div v-if="pendingTasks.length === 0" class="text-center py-4 text-yellow-700">
-                  Nenhuma tarefa pendente
-                </div>
-              </div>
-            </div>
-
-            <!-- Tarefas Concluídas -->
-            <div class="bg-green-50 rounded-lg p-4">
-              <h4 class="font-medium text-green-900 mb-3 flex items-center">
-                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                Tarefas Concluídas
-              </h4>
-              <div class="space-y-2">
-                <div
-                  v-for="task in completedTasks"
-                  :key="task.id"
-                  class="bg-white rounded p-3 border border-green-200"
-                >
-                  <h5 class="font-medium text-gray-900">{{ task.name }}</h5>
-                  <p class="text-sm text-gray-600">{{ task.description || 'Sem descrição' }}</p>
-                  <p class="text-xs text-green-600 mt-1">
-                    Concluída em {{ formatDate(task.completion_date) }}
-                  </p>
-                </div>
-                <div v-if="completedTasks.length === 0" class="text-center py-4 text-green-700">
-                  Nenhuma tarefa concluída
-                </div>
+        <!-- Tab: Histórico de Ações -->
+        <div v-if="activeTab === 'history'" class="space-y-4">
+          <h3 class="text-lg font-medium text-gray-900">Histórico de Ações</h3>
+          <div class="space-y-3">
+            <div
+              v-for="(action, index) in processHistory"
+              :key="index"
+              class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg"
+            >
+              <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">{{ action.action }}</p>
+                <p class="text-sm text-gray-500">{{ action.description }}</p>
+                <p class="text-xs text-gray-400 mt-1">{{ formatDate(action.timestamp) }}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useProcessesStore } from '../stores/processes'
-import { useNotifications } from '../composables/useNotifications'
-import { processService } from '../services/api'
-import BpmnJS from 'bpmn-js'
+import { useProcessesStore } from '@/stores/processes'
+import { formatDate } from '@/utils/dateUtils'
 
 export default {
   name: 'ProcessDetail',
   setup() {
     const route = useRoute()
     const processesStore = useProcessesStore()
-    const { showError } = useNotifications()
-
+    
     const activeTab = ref('overview')
-    const bpmnLoading = ref(false)
+    const selectedStatusFilter = ref('all')
+    const process = ref(null)
+    const allTasks = ref([])
+    const processHistory = ref([])
     const bpmnViewer = ref(null)
+    const loading = ref(false)
+    const error = ref(null)
 
     const tabs = [
       { id: 'overview', name: 'Visão Geral' },
-      { id: 'bpmn', name: 'Diagrama BPMN' },
-      { id: 'activities', name: 'Atividades' }
+      { id: 'bpmn', name: 'Fluxo do Processo' },
+      { id: 'history', name: 'Histórico de Ações' }
     ]
 
-    const process = computed(() => {
-      const processId = route.params.id
-      return processesStore.processes.find(p => p.id === processId)
-    })
-
-    const allTasks = computed(() => {
-      if (!process.value) return []
-      return processesStore.tasksByProcess(process.value.id)
-    })
+    const statusFilters = [
+      { value: 'all', label: 'Todos' },
+      { value: 'completed', label: 'Concluídos' },
+      { value: 'in-progress', label: 'Em andamento' },
+      { value: 'pending', label: 'Pendentes' }
+    ]
 
     const completedTasks = computed(() => 
       allTasks.value.filter(task => task.status === 'completed')
@@ -367,373 +295,209 @@ export default {
       return Math.round((completedTasks.value.length / allTasks.value.length) * 100)
     })
 
+    const filteredTasks = computed(() => {
+      if (selectedStatusFilter.value === 'all') {
+        return allTasks.value
+      }
+      return allTasks.value.filter(task => task.status === selectedStatusFilter.value)
+    })
+
     const getStatusText = (status) => {
       const statusMap = {
-        'active': 'Ativo',
         'completed': 'Concluído',
         'pending': 'Pendente',
-        'in-progress': 'Em Andamento'
+        'in-progress': 'Em andamento',
+        'opened': 'Aberto',
+        'closed': 'Fechado'
       }
       return statusMap[status] || status
     }
 
-    const formatDate = (dateString) => {
-      if (!dateString) return 'Data não disponível'
-      try {
-        const dt = new Date(dateString)
-        const saoPauloOffset = -3 * 60
-        const localTime = new Date(dt.getTime() + (saoPauloOffset * 60 * 1000))
-        return localTime.toLocaleDateString('pt-BR')
-      } catch (error) {
-        return 'Data inválida'
+    const getPriorityText = (priority) => {
+      const priorityMap = {
+        'high': 'Alta',
+        'medium': 'Média',
+        'low': 'Baixa'
       }
+      return priorityMap[priority] || 'Não definida'
     }
 
-    // Funções do BPMN
-    const initBpmnViewer = async () => {
-      if (!process.value) return
-
-      try {
-        bpmnLoading.value = true
-        
-        // Aguardar o próximo tick para garantir que o DOM foi atualizado
-        await nextTick()
-        
-        // Verificar se o container existe
-        const container = document.getElementById('bpmn-container')
-        if (!container) {
-          throw new Error('Container BPMN não encontrado')
-        }
-        
-        // Destruir instância anterior se existir
-        if (bpmnViewer.value) {
-          bpmnViewer.value.destroy()
-          bpmnViewer.value = null
-        }
-        
-        // Criar instância do BPMN.js com configurações de interação
-        bpmnViewer.value = new BpmnJS({
-          container: '#bpmn-container',
-          keyboard: {
-            bindTo: document
-          }
-        })
-
-        // Buscar o template BPMN real do processo
-        const response = await processService.getProcessTemplate(process.value.id)
-        
-        if (!response.success || !response.data) {
-          throw new Error('Template BPMN não encontrado para este processo')
-        }
-        
-        const xmlContent = response.data
-        
-        // Validar se o XML é uma string válida
-        if (typeof xmlContent !== 'string' || xmlContent.trim().length === 0) {
-          throw new Error('Template BPMN inválido: conteúdo não é uma string válida')
-        }
-        
-        await bpmnViewer.value.importXML(xmlContent)
-        
-        // Aguardar um pouco para garantir que o diagrama foi renderizado
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        // Configurar interações de mouse
-        setupMouseInteractions()
-        
-        // Aplicar cores baseadas no status das tarefas
-        colorBpmnElements()
-        
-        // Ajustar zoom inicial
-        const canvas = bpmnViewer.value.get('canvas')
-        if (canvas && canvas.zoom) {
-          canvas.zoom('fit-viewport', 'auto')
-        }
-        
-        console.log('BPMN Viewer inicializado com sucesso')
-        
-      } catch (error) {
-        console.error('Erro ao carregar BPMN:', error)
-        showError(`Erro ao carregar diagrama BPMN: ${error.message}`)
-      } finally {
-        bpmnLoading.value = false
-      }
-    }
-
-    const setupMouseInteractions = () => {
-      if (!bpmnViewer.value) return
-
-      const canvas = bpmnViewer.value.get('canvas')
-      const container = document.getElementById('bpmn-container')
-
-      // Prevenir seleção de texto
-      container.style.userSelect = 'none'
-      container.style.webkitUserSelect = 'none'
-      container.style.mozUserSelect = 'none'
-      container.style.msUserSelect = 'none'
-
-      // Configurar zoom com roda do mouse
-      container.addEventListener('wheel', (event) => {
-        event.preventDefault()
-        const delta = event.deltaY > 0 ? -0.1 : 0.1
-        const currentZoom = canvas.zoom()
-        const newZoom = Math.max(0.1, Math.min(5, currentZoom + delta))
-        
-        // Zoom no ponto do mouse
-        const rect = container.getBoundingClientRect()
-        const x = event.clientX - rect.left
-        const y = event.clientY - rect.top
-        
-        canvas.zoom(newZoom, { x, y })
-      })
-
-      // Configurar pan com arraste do mouse
-      let isPanning = false
-      let lastX = 0
-      let lastY = 0
-
-      container.addEventListener('mousedown', (event) => {
-        if (event.button === 0) { // Botão esquerdo
-          event.preventDefault() // Prevenir seleção de texto
-          isPanning = true
-          lastX = event.clientX
-          lastY = event.clientY
-          container.style.cursor = 'grabbing'
-        }
-      })
-
-      container.addEventListener('mousemove', (event) => {
-        if (isPanning) {
-          event.preventDefault() // Prevenir seleção de texto
-          const deltaX = event.clientX - lastX
-          const deltaY = event.clientY - lastY
-          
-          // Inverter a direção do pan
-          canvas.scroll({
-            dx: deltaX,
-            dy: deltaY
-          })
-          
-          lastX = event.clientX
-          lastY = event.clientY
-        }
-      })
-
-      container.addEventListener('mouseup', (event) => {
-        if (isPanning) {
-          event.preventDefault() // Prevenir seleção de texto
-        }
-        isPanning = false
-        container.style.cursor = 'grab'
-      })
-
-      container.addEventListener('mouseleave', () => {
-        isPanning = false
-        container.style.cursor = 'grab'
-      })
-
-      // Prevenir seleção de texto em todo o container
-      container.addEventListener('selectstart', (event) => {
-        event.preventDefault()
-      })
-    }
-
-    const colorBpmnElements = () => {
-      if (!bpmnViewer.value) return
-
-      try {
-        const elementRegistry = bpmnViewer.value.get('elementRegistry')
-        
-        // Aguardar um pouco para garantir que os elementos foram renderizados
-        setTimeout(() => {
-          // Colorir elementos baseado no status das tarefas
-          allTasks.value.forEach(task => {
-            const elements = findElementsByName(elementRegistry, task.name)
-            elements.forEach(element => {
-              const gfx = elementRegistry.getGraphics(element)
-              if (gfx) {
-                // Tentar diferentes seletores para encontrar o elemento visual
-                const visual = gfx.querySelector('.djs-visual > *') || 
-                              gfx.querySelector('.djs-visual') ||
-                              gfx.querySelector('rect') ||
-                              gfx.querySelector('path') ||
-                              gfx.querySelector('circle')
-                
-                if (visual) {
-                  switch (task.status) {
-                    case 'completed':
-                      visual.style.fill = '#d4edda'
-                      visual.style.stroke = '#155724'
-                      visual.style.strokeWidth = '2'
-                      break
-                    case 'in-progress':
-                      visual.style.fill = '#fff3cd'
-                      visual.style.stroke = '#856404'
-                      visual.style.strokeWidth = '2'
-                      break
-                    case 'pending':
-                      visual.style.fill = '#f8d7da'
-                      visual.style.stroke = '#721c24'
-                      visual.style.strokeWidth = '2'
-                      break
-                  }
-                }
-              }
-            })
-          })
-        }, 500) // Aguardar 500ms para garantir renderização
-      } catch (error) {
-        console.error('Erro ao colorir elementos BPMN:', error)
-      }
-    }
-
-    const findElementsByName = (registry, nameToFind) => {
-      const normalizedNameToFind = normalizeString(nameToFind)
-      const allElements = registry.getAll()
+    const loadProcessData = async () => {
+      loading.value = true
+      error.value = null
       
-      return allElements.filter(el => {
-        if (el.businessObject && el.businessObject.name) {
-          const normalizedElementName = normalizeString(el.businessObject.name)
-          return normalizedElementName.includes(normalizedNameToFind) || 
-                 normalizedNameToFind.includes(normalizedElementName)
+      try {
+        const processId = route.params.id
+        console.log('Carregando dados do processo:', processId)
+        
+        // Testar dados mock para debug
+        if (!processId) {
+          throw new Error('ID do processo não fornecido')
         }
-        return false
-      })
+        
+        // Carregar dados do processo
+        const processData = await processesStore.getProcessById(processId)
+        process.value = processData
+        console.log('Dados do processo carregados:', processData)
+        
+        // Carregar tarefas do processo
+        console.log('Carregando tarefas do processo...')
+        
+        // Tentar primeiro com o método específico
+        let tasksData = await processesStore.getProcessTasks(processId)
+        console.log('Tarefas carregadas (método específico):', tasksData)
+        
+        // Se não funcionar, tentar com o método fetchProcessTasks
+        if (!tasksData || !Array.isArray(tasksData) || tasksData.length === 0) {
+          console.log('Tentando método alternativo...')
+          await processesStore.fetchProcessTasks({ processId })
+          tasksData = processesStore.tasks
+          console.log('Tarefas carregadas (método alternativo):', tasksData)
+        }
+        
+        // Se não houver tarefas, definir como array vazio
+        if (!tasksData || !Array.isArray(tasksData)) {
+          console.warn('Nenhuma tarefa encontrada ou formato inválido:', tasksData)
+          tasksData = []
+        }
+        
+        if (tasksData && Array.isArray(tasksData)) {
+          allTasks.value = tasksData.map(task => ({
+            ...task,
+            status: task.status || 'pending',
+            priority: task.priority || 'medium',
+            assignee: task.assignee || 'Não atribuído',
+            due_date: task.due_date || null
+          }))
+        } else {
+          console.warn('Nenhuma tarefa encontrada ou formato inválido:', tasksData)
+          allTasks.value = []
+        }
+
+        // Carregar histórico do processo
+        console.log('Carregando histórico do processo...')
+        const historyData = await processesStore.getProcessHistory(processId)
+        processHistory.value = historyData || []
+        console.log('Histórico carregado:', processHistory.value)
+
+      } catch (err) {
+        console.error('Erro ao carregar dados do processo:', err)
+        
+        // Verificar se é um erro de rede/API
+        if (err.response) {
+          const status = err.response.status
+          const statusText = err.response.statusText
+          
+          if (status === 500) {
+            error.value = `Erro interno do servidor (500): ${statusText}. Verifique os logs do backend.`
+          } else if (status === 404) {
+            error.value = 'Processo não encontrado (404). Verifique se o ID está correto.'
+          } else if (status === 401) {
+            error.value = 'Não autorizado (401). Verifique se está logado.'
+          } else {
+            error.value = `Erro ${status}: ${statusText}`
+          }
+        } else if (err.request) {
+          error.value = 'Erro de conexão. Verifique se o backend está rodando.'
+        } else {
+          error.value = 'Erro ao carregar dados do processo: ' + err.message
+        }
+        
+        // Definir valores padrão em caso de erro
+        allTasks.value = []
+        processHistory.value = []
+      } finally {
+        loading.value = false
+      }
     }
 
-    const normalizeString = (str) => {
-      if (typeof str !== 'string') return ''
-      return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    const initBpmnViewer = async () => {
+      if (typeof window !== 'undefined' && window.BpmnJS) {
+        const container = document.getElementById('bpmn-container')
+        if (container) {
+          bpmnViewer.value = new window.BpmnJS({
+            container: container,
+            keyboard: {
+              bindTo: window
+            }
+          })
+
+          try {
+            const processId = route.params.id
+            const bpmnXml = await processesStore.getProcessBpmn(processId)
+            if (bpmnXml) {
+              await bpmnViewer.value.importXML(bpmnXml)
+              bpmnViewer.value.get('canvas').zoom('fit-viewport')
+            }
+          } catch (error) {
+            console.error('Erro ao carregar diagrama BPMN:', error)
+          }
+        }
+      }
     }
 
     const zoomIn = () => {
-      console.log('Zoom In clicked')
-      if (bpmnViewer.value && bpmnViewer.value.get) {
-        try {
-          const canvas = bpmnViewer.value.get('canvas')
-          if (canvas && canvas.zoom) {
-            const currentZoom = canvas.zoom()
-            const newZoom = Math.min(5, currentZoom + 0.2)
-            console.log('Current zoom:', currentZoom, 'New zoom:', newZoom)
-            canvas.zoom(newZoom)
-          } else {
-            console.error('Canvas ou método zoom não encontrado')
-          }
-        } catch (error) {
-          console.error('Erro no zoom in:', error)
-        }
-      } else {
-        console.error('BPMN Viewer não inicializado')
+      if (bpmnViewer.value) {
+        bpmnViewer.value.get('canvas').zoom(bpmnViewer.value.get('canvas').zoom() * 1.2)
       }
     }
 
     const zoomOut = () => {
-      console.log('Zoom Out clicked')
-      if (bpmnViewer.value && bpmnViewer.value.get) {
-        try {
-          const canvas = bpmnViewer.value.get('canvas')
-          if (canvas && canvas.zoom) {
-            const currentZoom = canvas.zoom()
-            const newZoom = Math.max(0.1, currentZoom - 0.2)
-            console.log('Current zoom:', currentZoom, 'New zoom:', newZoom)
-            canvas.zoom(newZoom)
-          } else {
-            console.error('Canvas ou método zoom não encontrado')
-          }
-        } catch (error) {
-          console.error('Erro no zoom out:', error)
-        }
-      } else {
-        console.error('BPMN Viewer não inicializado')
+      if (bpmnViewer.value) {
+        bpmnViewer.value.get('canvas').zoom(bpmnViewer.value.get('canvas').zoom() * 0.8)
       }
     }
 
     const zoomFit = () => {
-      console.log('Zoom Fit clicked')
-      if (bpmnViewer.value && bpmnViewer.value.get) {
-        try {
-          const canvas = bpmnViewer.value.get('canvas')
-          if (canvas && canvas.zoom) {
-            canvas.zoom('fit-viewport', 'auto')
-            console.log('Zoom fit aplicado')
-          } else {
-            console.error('Canvas ou método zoom não encontrado')
-          }
-        } catch (error) {
-          console.error('Erro no zoom fit:', error)
-        }
-      } else {
-        console.error('BPMN Viewer não inicializado')
-      }
-    }
-
-    const resetView = () => {
-      console.log('Reset View clicked')
-      if (bpmnViewer.value && bpmnViewer.value.get) {
-        try {
-          const canvas = bpmnViewer.value.get('canvas')
-          if (canvas && canvas.zoom && canvas.centerOn) {
-            canvas.zoom(1, 'auto')
-            const rootElement = canvas.get('rootElement')
-            if (rootElement) {
-              canvas.centerOn(rootElement)
-              console.log('Reset view aplicado')
-            }
-          } else {
-            console.error('Canvas ou métodos não encontrados')
-          }
-        } catch (error) {
-          console.error('Erro no reset view:', error)
-        }
-      } else {
-        console.error('BPMN Viewer não inicializado')
+      if (bpmnViewer.value) {
+        bpmnViewer.value.get('canvas').zoom('fit-viewport')
       }
     }
 
     onMounted(async () => {
-      await processesStore.initializeData()
+      console.log('Componente ProcessDetail montado')
+      console.log('ID do processo da rota:', route.params.id)
       
-      // Inicializar BPMN quando a tab for ativada
-      if (activeTab.value === 'bpmn') {
-        await initBpmnViewer()
+      if (route.params.id) {
+        await loadProcessData()
+        
+        // Carregar BPMN.js se estiver na aba de diagrama
+        if (activeTab.value === 'bpmn') {
+          await initBpmnViewer()
+        }
+      } else {
+        console.error('ID do processo não encontrado na rota')
       }
     })
 
-    onUnmounted(() => {
-      if (bpmnViewer.value) {
-        bpmnViewer.value.destroy()
-      }
-    })
-
-    // Observar mudanças na tab ativa
     watch(activeTab, async (newTab) => {
-      if (newTab === 'bpmn') {
-        // Aguardar um pouco para garantir que o DOM foi renderizado
-        await nextTick()
-        setTimeout(async () => {
-          if (!bpmnViewer.value) {
-            await initBpmnViewer()
-          }
-        }, 100)
+      if (newTab === 'bpmn' && !bpmnViewer.value) {
+        await initBpmnViewer()
       }
     })
 
     return {
       activeTab,
-      tabs,
+      selectedStatusFilter,
       process,
       allTasks,
+      processHistory,
+      tabs,
+      statusFilters,
       completedTasks,
       pendingTasks,
       inProgressTasks,
       progressPercentage,
-      bpmnLoading,
+      filteredTasks,
       getStatusText,
+      getPriorityText,
       formatDate,
       zoomIn,
       zoomOut,
       zoomFit,
-      resetView
+      loading,
+      error,
+      loadProcessData
     }
   }
 }
@@ -748,24 +512,7 @@ export default {
   @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
 }
 
-.btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
-}
-
-/* Prevenir seleção de texto no container BPMN */
 #bpmn-container {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-#bpmn-container * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+  background: white;
 }
 </style> 

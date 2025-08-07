@@ -261,6 +261,91 @@ export const useProcessesStore = defineStore('processes', {
         console.error('Erro ao buscar tarefas:', error);
         this.error = 'Falha ao carregar tarefas';
       }
+    },
+
+    /**
+     * Buscar processo por ID
+     */
+    async getProcessById(processId) {
+      try {
+        // Primeiro, tentar encontrar no store
+        let process = this.processes.find(p => p.id === processId);
+        
+        if (process) {
+          console.log('Processo encontrado no store:', process);
+          return process;
+        }
+        
+        // Se não encontrar no store, buscar na API
+        console.log('Processo não encontrado no store, buscando na API...');
+        const response = await processService.getProcessById(processId);
+        
+        if (response.success) {
+          console.log('Processo encontrado na API:', response.data);
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Processo não encontrado');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar processo:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Buscar tarefas de um processo específico
+     */
+    async getProcessTasks(processId) {
+      try {
+        console.log('Buscando tarefas para o processo:', processId);
+        const response = await taskService.getAllTasks({ processId });
+        console.log('Resposta da API para tarefas:', response);
+        
+        if (response.success) {
+          const tasks = response.data.tasks || response.data || [];
+          console.log('Tarefas extraídas:', tasks);
+          return tasks;
+        } else {
+          throw new Error(response.message || 'Erro ao buscar tarefas do processo');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tarefas do processo:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Buscar histórico de um processo
+     */
+    async getProcessHistory(processId) {
+      try {
+        const response = await processService.getProcessHistory(processId);
+        if (response.success) {
+          return response.data.histories || response.data || [];
+        } else {
+          throw new Error(response.message || 'Erro ao buscar histórico do processo');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar histórico do processo:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * Buscar diagrama BPMN de um processo
+     */
+    async getProcessBpmn(processId) {
+      try {
+        const response = await processService.getProcessTemplate(processId);
+        if (response.success) {
+          return response.data.xml || response.data;
+        } else {
+          throw new Error(response.message || 'Erro ao buscar diagrama BPMN');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar diagrama BPMN:', error);
+        throw error;
+      }
     }
   }
 }); 

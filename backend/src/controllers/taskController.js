@@ -105,6 +105,127 @@ async function getTotalTasksCount(status = null) {
 }
 
 /**
+ * Buscar tarefas do histórico de um processo (baseado no código Streamlit)
+ */
+async function getTasksFromProcessHistory(processId, processName = 'Auditoria BIM') {
+  try {
+    console.log(`[DEBUG] getTasksFromProcessHistory iniciado para processo: ${processId}`);
+    
+    const historyPayload = {
+      "filters": [], 
+      "page": 1, 
+      "per_page": 100, 
+      "sortBy": ["created_at", "asc"]
+    };
+
+    console.log(`[DEBUG] Buscando histórico do processo ${processId} com payload:`, JSON.stringify(historyPayload));
+    
+    // Buscar histórico do processo
+    const historyResponse = await holmesService.getProcessHistory(processId, historyPayload);
+    console.log(`[DEBUG] Resposta do histórico:`, historyResponse ? 'sucesso' : 'falha');
+    
+    if (!historyResponse || !historyResponse.histories) {
+      console.log(`[DEBUG] Nenhum histórico encontrado para processo ${processId}`);
+      return [];
+    }
+
+    const allTasks = {};
+    const processIdentifier = processName; // Simplificado para o exemplo
+
+    // Primeira passagem: coletar todas as tarefas (baseado no código Streamlit)
+    for (const hist of historyResponse.histories) {
+      const props = hist.properties || {};
+      const taskId = props.task_id;
+      
+      if (taskId) {
+        if (!allTasks[taskId]) {
+          allTasks[taskId] = {
+            process_id: processId,
+            process_identifier: processIdentifier,
+            task_name: props.task_name,
+            long_link: props.long_link || null,
+            task_id: taskId,
+            created_at: hist.created_at || '',
+            status: 'in-progress' // Status padrão
+          };
+        }
+      }
+    }
+
+    // Segunda passagem: verificar tarefas completadas (baseado no código Streamlit)
+    for (const hist of historyResponse.histories) {
+      if (hist.key === 'history.take_action') {
+        const props = hist.properties || {};
+        const taskId = props.task_id;
+        
+        if (taskId && allTasks[taskId]) {
+          const completionDate = hist.created_at;
+          const currentCompletion = allTasks[taskId].completion_date;
+          
+          if (!currentCompletion || completionDate > currentCompletion) {
+            allTasks[taskId].is_completed = true;
+            allTasks[taskId].completion_date = completionDate;
+            allTasks[taskId].status = 'completed';
+          }
+        }
+      }
+    }
+
+    // Terceira passagem: buscar detalhes das tarefas pendentes em paralelo (OTIMIZADO)
+    const pendingTaskIds = [];
+    for (const taskId in allTasks) {
+      const taskDetails = allTasks[taskId];
+      if (!taskDetails.is_completed) {
+        pendingTaskIds.push(taskId);
+      }
+    }
+
+    console.log(`[DEBUG] Tarefas pendentes encontradas: ${pendingTaskIds.length}`);
+
+    if (pendingTaskIds.length > 0) {
+      console.log(`[PERFORMANCE] getTasksFromProcessHistory - Buscando detalhes de ${pendingTaskIds.length} tarefas pendentes sequencialmente`);
+      
+      // Usar apenas busca sequencial para evitar erro 500
+      for (const taskId of pendingTaskIds) {
+        try {
+          console.log(`[DEBUG] Buscando detalhes da tarefa: ${taskId}`);
+          const taskApiData = await holmesService.getTaskDetails(taskId);
+          console.log(`[DEBUG] Detalhes da tarefa ${taskId} obtidos:`, taskApiData ? 'sucesso' : 'falha');
+          if (taskApiData && taskApiData.due_date) {
+            allTasks[taskId].due_date = taskApiData.due_date;
+          }
+        } catch (error) {
+          console.error(`[DEBUG] Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
+          console.error(`[DEBUG] Stack trace:`, error.stack);
+        }
+      }
+    }
+
+    // Converter para array e formatar
+    const tasksArray = Object.values(allTasks).map(task => ({
+      id: task.task_id,
+      name: task.task_name,
+      status: task.status,
+      processId: task.process_id,
+      processName: processName,
+      processIdentifier: task.process_identifier,
+      created_at: task.created_at,
+      due_date: task.due_date,
+      completion_date: task.completion_date,
+      is_completed: task.is_completed || false,
+      long_link: task.long_link,
+      task_id: task.task_id,
+      task_name: task.task_name
+    }));
+
+    return tasksArray;
+  } catch (error) {
+    console.error(`Erro ao buscar tarefas do processo ${processId}:`, error);
+    return [];
+  }
+}
+
+/**
  * Buscar todas as tarefas de todos os processos (baseado no código Streamlit)
  */
 async function getAllTasksFromAllProcesses() {
@@ -472,15 +593,18 @@ class TaskController {
   async getAllTasks(req, res) {
     try {
       const { processId, status } = req.query;
+      console.log(`[DEBUG] getAllTasks chamado com processId: ${processId}, status: ${status}`);
 
       let allTasks = [];
       let totalTasks = 0;
       
       if (processId) {
         // Buscar tarefas de um processo específico
-        const tasks = await this.getTasksFromProcessHistory(processId);
+        console.log(`[DEBUG] Buscando tarefas para processo: ${processId}`);
+        const tasks = await getTasksFromProcessHistory(processId);
         allTasks = tasks;
         totalTasks = tasks.length;
+        console.log(`[DEBUG] Encontradas ${totalTasks} tarefas para o processo ${processId}`);
       } else {
         // Buscar todas as tarefas de todos os processos
         console.log('[PERFORMANCE] Buscando todas as tarefas sem paginação');
@@ -524,10 +648,18 @@ class TaskController {
       });
     } catch (error) {
       console.error('Erro ao buscar tarefas:', error);
-      res.status(500).json({
+      console.error('Stack trace:', error.stack);
+      
+      // Fornecer informações mais detalhadas sobre o erro
+      const errorInfo = {
         error: 'Erro interno do servidor',
-        message: error.message
-      });
+        message: error.message,
+        timestamp: new Date().toISOString(),
+        processId: req.query.processId || null,
+        status: req.query.status || null
+      };
+      
+      res.status(500).json(errorInfo);
     }
   }
 
@@ -575,126 +707,9 @@ class TaskController {
   }
 
   /**
-   * Buscar tarefas do histórico de um processo (baseado no código Streamlit)
+   * Buscar instâncias disponíveis
+   * GET /api/instances
    */
-  async getTasksFromProcessHistory(processId, processName = 'Auditoria BIM') {
-    try {
-      const historyPayload = {
-        "filters": [], 
-        "page": 1, 
-        "per_page": 100, 
-        "sortBy": ["created_at", "asc"]
-      };
-
-      // Buscar histórico do processo
-      const historyResponse = await holmesService.getProcessHistory(processId, historyPayload);
-      if (!historyResponse || !historyResponse.histories) {
-        return [];
-      }
-
-      const allTasks = {};
-      const processIdentifier = processName; // Simplificado para o exemplo
-
-      // Primeira passagem: coletar todas as tarefas (baseado no código Streamlit)
-      for (const hist of historyResponse.histories) {
-        const props = hist.properties || {};
-        const taskId = props.task_id;
-        
-        if (taskId) {
-          if (!allTasks[taskId]) {
-            allTasks[taskId] = {
-              process_id: processId,
-              process_identifier: processIdentifier,
-              task_name: props.task_name,
-              long_link: props.long_link || null,
-              task_id: taskId,
-              created_at: hist.created_at || '',
-              status: 'in-progress' // Status padrão
-            };
-          }
-        }
-      }
-
-      // Segunda passagem: verificar tarefas completadas (baseado no código Streamlit)
-      for (const hist of historyResponse.histories) {
-        if (hist.key === 'history.take_action') {
-          const props = hist.properties || {};
-          const taskId = props.task_id;
-          
-          if (taskId && allTasks[taskId]) {
-            const completionDate = hist.created_at;
-            const currentCompletion = allTasks[taskId].completion_date;
-            
-            if (!currentCompletion || completionDate > currentCompletion) {
-              allTasks[taskId].is_completed = true;
-              allTasks[taskId].completion_date = completionDate;
-              allTasks[taskId].status = 'completed';
-            }
-          }
-        }
-      }
-
-      // Terceira passagem: buscar detalhes das tarefas pendentes em paralelo (OTIMIZADO)
-      const pendingTaskIds = [];
-      for (const taskId in allTasks) {
-        const taskDetails = allTasks[taskId];
-        if (!taskDetails.is_completed) {
-          pendingTaskIds.push(taskId);
-        }
-      }
-
-      if (pendingTaskIds.length > 0) {
-        console.log(`[PERFORMANCE] getTasksFromProcessHistory - Buscando detalhes de ${pendingTaskIds.length} tarefas pendentes em paralelo`);
-        try {
-          const taskDetailsMap = await holmesService.getMultipleTaskDetails(pendingTaskIds);
-          
-          // Atualizar tarefas com os detalhes obtidos
-          for (const taskId of pendingTaskIds) {
-            const taskApiData = taskDetailsMap[taskId];
-            if (taskApiData && taskApiData.due_date) {
-              allTasks[taskId].due_date = taskApiData.due_date;
-            }
-          }
-        } catch (error) {
-          console.warn('Erro ao buscar detalhes das tarefas em paralelo, tentando sequencial:', error.message);
-          
-          // Fallback para busca sequencial em caso de erro
-          for (const taskId of pendingTaskIds) {
-            try {
-              const taskApiData = await holmesService.getTaskDetails(taskId);
-              if (taskApiData && taskApiData.due_date) {
-                allTasks[taskId].due_date = taskApiData.due_date;
-              }
-            } catch (error) {
-              console.warn(`Erro ao buscar detalhes da tarefa ${taskId}:`, error.message);
-            }
-          }
-        }
-      }
-
-      // Converter para array e formatar
-      const tasksArray = Object.values(allTasks).map(task => ({
-        id: task.task_id,
-        name: task.task_name,
-        status: task.status,
-        processId: task.process_id,
-        processName: processName,
-        processIdentifier: task.process_identifier,
-        created_at: task.created_at,
-        due_date: task.due_date,
-        completion_date: task.completion_date,
-        is_completed: task.is_completed || false,
-        long_link: task.long_link,
-        task_id: task.task_id,
-        task_name: task.task_name
-      }));
-
-      return tasksArray;
-    } catch (error) {
-      console.error(`Erro ao buscar tarefas do processo ${processId}:`, error);
-      return [];
-    }
-  }
 
   /**
    * Buscar instâncias disponíveis
