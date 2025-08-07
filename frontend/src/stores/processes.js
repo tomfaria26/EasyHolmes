@@ -336,14 +336,20 @@ export const useProcessesStore = defineStore('processes', {
      */
     async getProcessBpmn(processId) {
       try {
+        console.log('[STORE] getProcessBpmn chamado para processo:', processId);
         const response = await processService.getProcessTemplate(processId);
+        console.log('[STORE] Resposta do getProcessTemplate:', response);
+        
         if (response.success) {
-          return response.data.xml || response.data;
+          const xml = response.data.xml || response.data;
+          console.log('[STORE] XML extraído:', xml ? 'Sim' : 'Não');
+          return xml;
         } else {
+          console.error('[STORE] Erro na resposta:', response.message);
           throw new Error(response.message || 'Erro ao buscar diagrama BPMN');
         }
       } catch (error) {
-        console.error('Erro ao buscar diagrama BPMN:', error);
+        console.error('[STORE] Erro ao buscar diagrama BPMN:', error);
         throw error;
       }
     }

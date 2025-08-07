@@ -138,8 +138,15 @@ export const processService = {
    * Buscar template BPMN de um processo
    */
   async getProcessTemplate(processId) {
-    const response = await apiClient.get(`/api/processes/${processId}/template`);
-    return response.data;
+    console.log('[API] getProcessTemplate chamado para processo:', processId);
+    try {
+      const response = await apiClient.get(`/api/processes/${processId}/template`);
+      console.log('[API] Resposta da API:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[API] Erro na requisição getProcessTemplate:', error);
+      throw error;
+    }
   }
 };
 

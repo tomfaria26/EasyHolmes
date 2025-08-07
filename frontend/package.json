@@ -14,6 +14,7 @@
     "pinia": "^2.1.7",
     "axios": "^1.6.0",
     "bpmn-js": "^16.0.0",
+    "vue-bpmn-modeler": "^1.2.0",
     "vuedraggable": "^4.1.0",
     "@headlessui/vue": "^1.7.16",
     "@heroicons/vue": "^2.0.18",

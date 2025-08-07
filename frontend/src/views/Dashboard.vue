@@ -43,7 +43,7 @@
     </div>
 
     <!-- Cards de Estatísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <!-- Card de Processos Ativos -->
       <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center">
@@ -57,23 +57,6 @@
           <div class="ml-4">
             <h3 class="text-lg font-medium text-gray-900">Processos Ativos</h3>
             <p class="text-2xl font-bold text-blue-600">{{ stats.activeProcesses }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card de Tarefas Pendentes -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-          </div>
-          <div class="ml-4">
-            <h3 class="text-lg font-medium text-gray-900">Tarefas Pendentes</h3>
-            <p class="text-2xl font-bold text-yellow-600">{{ stats.pendingTasks }}</p>
           </div>
         </div>
       </div>
@@ -171,7 +154,7 @@
       <div class="space-y-4">
         <div class="flex items-center justify-between">
           <span class="text-sm text-gray-600">Tarefas Concluídas</span>
-          <span class="text-sm font-medium text-gray-900">{{ stats.completedTasks }} / {{ stats.completedTasks + stats.pendingTasks + stats.inProgressTasks }}</span>
+          <span class="text-sm font-medium text-gray-900">{{ stats.completedTasks }} tarefas ({{ getOverallProgress() }}%)</span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-3">
           <div 
@@ -184,6 +167,9 @@
           <span>50%</span>
           <span>100%</span>
         </div>
+        <p class="text-xs text-gray-500 mt-2">
+          Baseado em todas as tarefas do sistema (concluídas e em andamento)
+        </p>
       </div>
     </div>
 
@@ -191,21 +177,12 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium text-gray-900">Processos Recentes</h3>
-        <div class="flex space-x-3">
-          <router-link
-            to="/tasks"
-            class="btn btn-primary"
-          >
-            Ver Todas as Tarefas
-          </router-link>
-          <router-link
-            v-if="isAdmin"
-            to="/users"
-            class="btn btn-secondary"
-          >
-            Gerenciar Usuários
-          </router-link>
-        </div>
+        <router-link
+          to="/tasks"
+          class="btn btn-primary"
+        >
+          Ver Todas as Tarefas
+        </router-link>
       </div>
       
       <div v-if="loading" class="text-center py-8">
@@ -233,26 +210,12 @@
           <div class="flex justify-between items-start">
             <div class="flex-1">
               <div class="flex items-center justify-between mb-2">
-                <h4 class="font-medium text-gray-900">{{ process.name || 'Processo sem nome' }}</h4>
+                <h4 class="font-medium text-gray-900">{{ getProcessDisplayName(process) }}</h4>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {{ process.status || 'ativo' }}
                 </span>
               </div>
               <p class="text-sm text-gray-500 mb-3">{{ process.description || 'Sem descrição' }}</p>
-              
-              <!-- Progresso do Processo -->
-              <div class="space-y-2">
-                <div class="flex items-center justify-between text-xs text-gray-500">
-                  <span>Progresso</span>
-                  <span>{{ getProcessProgress(process.id) }}%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    class="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-300"
-                    :style="{ width: `${getProcessProgress(process.id)}%` }"
-                  ></div>
-                </div>
-              </div>
               
               <div class="flex items-center justify-between mt-3">
                 <div class="flex items-center space-x-4 text-xs text-gray-500">
@@ -314,12 +277,7 @@ export default {
       return tasks.filter(task => task.status === 'completed').length
     }
 
-    const getProcessProgress = (processId) => {
-      const tasks = processesStore.tasksByProcess(processId)
-      if (tasks.length === 0) return 0
-      const completed = tasks.filter(task => task.status === 'completed').length
-      return Math.round((completed / tasks.length) * 100)
-    }
+
 
     const formatDate = (dateString, includeTime = false) => {
       if (!dateString) return 'Data não disponível'
@@ -347,7 +305,7 @@ export default {
     }
 
     const getOverallProgress = () => {
-      const total = stats.value.completedTasks + stats.value.pendingTasks + stats.value.inProgressTasks
+      const total = stats.value.completedTasks + stats.value.inProgressTasks
       if (total === 0) return 0
       return Math.round((stats.value.completedTasks / total) * 100)
     }
@@ -356,6 +314,19 @@ export default {
       // Por enquanto, navegar para a página de tarefas
       router.push('/tasks')
       showSuccess('Funcionalidade de criação de processo será implementada em breve!')
+    }
+
+    const getProcessDisplayName = (process) => {
+      // Priorizar o identificador do processo se disponível (nome completo)
+      if (process.identifier) {
+        return process.identifier
+      } else if (process.name) {
+        return process.name
+      } else if (process.description) {
+        return process.description
+      } else {
+        return 'Processo sem nome'
+      }
     }
 
     onMounted(async () => {
@@ -372,10 +343,10 @@ export default {
       viewProcessDetail,
       getProcessTasksCount,
       getCompletedTasksCount,
-      getProcessProgress,
       formatDate,
       getOverallProgress,
-      createNewProcess
+      createNewProcess,
+      getProcessDisplayName
     }
   }
 }
