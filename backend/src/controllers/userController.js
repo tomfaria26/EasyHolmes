@@ -374,7 +374,6 @@ const updateUserValidation = [
 // Validações para alteração de senha
 const changePasswordValidation = [
   body('currentPassword')
-    .optional()
     .isLength({ min: 1 })
     .withMessage('Senha atual é obrigatória'),
   body('newPassword')

@@ -28,5 +28,11 @@ module.exports = defineConfig({
       args[0].__VUE_PROD_DEVTOOLS__ = 'false'
       return args
     })
+    
+    // Configurar o título da aplicação
+    config.plugin('html').tap(args => {
+      args[0].title = 'EasyHolmes'
+      return args
+    })
   }
 }) 

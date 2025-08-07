@@ -987,15 +987,8 @@ export default {
             
             // Preencher valores das propriedades que já têm valor (apenas as editáveis)
             taskProperties.value.forEach(property => {
-              console.log(`[DEBUG] Propriedade: ${property.name}, read_only: ${property.read_only}, hidden: ${property.hidden}, value: ${property.value}`)
-              console.log(`[DEBUG] Tipo da propriedade read_only: ${typeof property.read_only}, hidden: ${typeof property.hidden}`)
-              console.log(`[DEBUG] Propriedade completa:`, property)
-              
               if (property.value && !property.read_only) {
                 selectedPropertyValues.value[property.id] = property.value
-                console.log(`[DEBUG] Preenchendo ${property.name} com valor: ${property.value}`)
-              } else if (property.read_only) {
-                console.log(`[DEBUG] Propriedade ${property.name} é read_only, não preenchendo no selectedPropertyValues`)
               }
               // Para propriedades somente leitura, NÃO preencher no selectedPropertyValues
               // para evitar que sejam editadas

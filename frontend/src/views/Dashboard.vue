@@ -248,9 +248,14 @@ export default {
     }
 
     onMounted(async () => {
-      await processesStore.initializeData()
-      console.log(`[DASHBOARD] Processos carregados: ${processesStore.processes.length}`)
-      console.log(`[DASHBOARD] Tarefas carregadas: ${processesStore.tasks.length}`)
+      // Atualizar estatísticas
+      processesStore.updateStats();
+      
+      // Verificar se há dados carregados
+      if (processesStore.processes.length === 0 && processesStore.tasks.length === 0) {
+        // Se não há dados, tentar carregar novamente
+        await processesStore.initializeData();
+      }
     })
 
     return {

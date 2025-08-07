@@ -159,6 +159,16 @@ export const useAuthStore = defineStore('auth', {
           this.clearAuth();
         }
       }
+    },
+
+    /**
+     * Atualizar dados do usuário
+     */
+    updateUserData(userData) {
+      this.user = { ...this.user, ...userData };
+      
+      // Atualizar no localStorage
+      localStorage.setItem('user', JSON.stringify(this.user));
     }
   }
 }); 

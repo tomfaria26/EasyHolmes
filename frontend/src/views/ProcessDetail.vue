@@ -376,7 +376,7 @@ export default {
       if (!route.params.id) return
       
       try {
-        console.log('Carregando histórico do processo:', route.params.id)
+
         const historyData = await processesStore.getProcessHistory(route.params.id)
         processHistory.value = historyData || []
         
@@ -391,7 +391,7 @@ export default {
           processCompletionDate.value = null
         }
         
-        console.log('Histórico carregado:', processHistory.value.length, 'eventos')
+        
       } catch (error) {
         console.error('Erro ao carregar histórico:', error)
         isProcessCompleted.value = false
@@ -406,20 +406,20 @@ export default {
       error.value = null
       
       try {
-        console.log('Carregando dados do processo:', route.params.id)
+  
         
         const processData = await processesStore.getProcessById(route.params.id)
         process.value = processData
-        console.log('Dados do processo carregados:', processData)
+        
         
         // Carregar histórico do processo para verificar conclusão
         await loadProcessHistory()
         
         // Carregar tarefas do processo
-        console.log('Carregando tarefas do processo...')
+
         
         let tasksData = await processesStore.getProcessTasks(route.params.id)
-        console.log('Tarefas carregadas (método específico):', tasksData)
+        
         
         if (!tasksData || !Array.isArray(tasksData) || tasksData.length === 0) {
           console.log('Tentando método alternativo...')
@@ -509,10 +509,7 @@ export default {
       loadingBpmn.value = true
       
       try {
-        console.log('[BPMN] Carregando XML do processo:', route.params.id)
-        
         const xmlData = await processesStore.getProcessBpmn(route.params.id)
-        console.log('[BPMN] XML carregado:', xmlData ? 'Sim' : 'Não')
         
         if (xmlData) {
           bpmnXml.value = xmlData
@@ -537,8 +534,6 @@ export default {
           console.error('[BPMN] Container não encontrado')
           return
         }
-
-        console.log('[BPMN] Inicializando viewer...')
         
         bpmnViewer.value = new BpmnJS({
           container: container,
@@ -547,13 +542,9 @@ export default {
           }
         })
 
-        console.log('[BPMN] Importando XML...')
         await bpmnViewer.value.importXML(bpmnXml.value)
         
-        console.log('[BPMN] XML importado, colorindo tarefas...')
         await colorizeTasks()
-        
-        console.log('[BPMN] Ajustando zoom...')
         bpmnViewer.value.get('canvas').zoom('fit-viewport')
         
         // Habilitar pan e zoom com mouse após carregamento
@@ -607,8 +598,6 @@ export default {
         // Definir cursor inicial
         container.style.cursor = 'grab'
         
-        console.log('[BPMN] Diagrama carregado com sucesso! Pan e zoom habilitados.')
-        
       } catch (error) {
         console.error('[BPMN] Erro ao inicializar viewer:', error)
       }
@@ -647,7 +636,7 @@ export default {
           .filter(task => task.status === 'in-progress')
           .map(task => task.name)
         
-        console.log(`[BPMN] Colorindo tarefas: ${completedTasks.length} concluídas, ${inProgressTasks.length} em andamento`)
+
         
         // Colorir tarefas concluídas (verde)
         completedTasks.forEach(name => {
@@ -720,7 +709,7 @@ export default {
           })
         }
         
-        console.log('[BPMN] Colorização SVG concluída (preservando textos)')
+
         
       } catch (error) {
         console.error('[BPMN] Erro ao colorir tarefas:', error)
@@ -728,9 +717,6 @@ export default {
     }
 
     onMounted(async () => {
-      console.log('Componente ProcessDetail montado')
-      console.log('ID do processo da rota:', route.params.id)
-      
       if (route.params.id) {
         await loadProcessData()
       } else {

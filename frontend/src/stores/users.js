@@ -119,8 +119,9 @@ export const useUsersStore = defineStore('users', {
           // Adicionar o novo usuário à lista
           this.users.push(response.data);
           
-          const { showNotification } = useNotifications();
-          showNotification('Usuário criado com sucesso!', 'success');
+          // Remover a chamada problemática do showNotification
+          // const { showNotification } = useNotifications();
+          // showNotification('Usuário criado com sucesso!', 'success');
           
           return { success: true, data: response.data };
         } else {
@@ -132,6 +133,10 @@ export const useUsersStore = defineStore('users', {
         
         if (error.response?.data?.message) {
           this.error = error.response.data.message;
+        } else if (error.response?.data?.error) {
+          this.error = error.response.data.error;
+        } else if (error.response?.data) {
+          this.error = JSON.stringify(error.response.data);
         } else {
           this.error = 'Erro de conexão. Tente novamente.';
         }
@@ -164,8 +169,9 @@ export const useUsersStore = defineStore('users', {
             this.currentUser = { ...this.currentUser, ...response.data };
           }
           
-          const { showNotification } = useNotifications();
-          showNotification('Usuário atualizado com sucesso!', 'success');
+          // Remover a chamada problemática do showNotification
+          // const { showNotification } = useNotifications();
+          // showNotification('Usuário atualizado com sucesso!', 'success');
           
           return { success: true, data: response.data };
         } else {
@@ -201,8 +207,9 @@ export const useUsersStore = defineStore('users', {
           // Remover o usuário da lista
           this.users = this.users.filter(user => user.id !== parseInt(id));
           
-          const { showNotification } = useNotifications();
-          showNotification('Usuário deletado com sucesso!', 'success');
+          // Remover a chamada problemática do showNotification
+          // const { showNotification } = useNotifications();
+          // showNotification('Usuário deletado com sucesso!', 'success');
           
           return { success: true };
         } else {
@@ -235,8 +242,9 @@ export const useUsersStore = defineStore('users', {
         const response = await userService.changePassword(id, passwordData);
         
         if (response.success) {
-          const { showNotification } = useNotifications();
-          showNotification('Senha alterada com sucesso!', 'success');
+          // Remover a chamada problemática do showNotification
+          // const { showNotification } = useNotifications();
+          // showNotification('Senha alterada com sucesso!', 'success');
           
           return { success: true };
         } else {

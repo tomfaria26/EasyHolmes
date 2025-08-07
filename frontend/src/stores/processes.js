@@ -217,18 +217,12 @@ export const useProcessesStore = defineStore('processes', {
       
       this.stats = {
         activeProcesses: activeProcessesCount,
+        totalProcesses: this.processes.length,
+        totalTasks: this.tasks.length,
         pendingTasks: 0, // Removido conforme solicitado anteriormente
         inProgressTasks: inProgressTasksCount,
         completedTasks: completedTasksCount
       };
-      
-      console.log('[STORE] Estatísticas atualizadas:', {
-        activeProcesses: activeProcessesCount,
-        inProgressTasks: inProgressTasksCount,
-        completedTasks: completedTasksCount,
-        totalProcesses: this.processes.length,
-        totalTasks: this.tasks.length
-      });
     },
 
     /**
@@ -285,7 +279,6 @@ export const useProcessesStore = defineStore('processes', {
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
-          console.log(`[STORE] Carregadas ${this.tasks.length} tarefas`);
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
         }
@@ -304,16 +297,13 @@ export const useProcessesStore = defineStore('processes', {
         let process = this.processes.find(p => p.id === processId);
         
         if (process) {
-          console.log('Processo encontrado no store:', process);
           return process;
         }
         
         // Se não encontrar no store, buscar na API
-        console.log('Processo não encontrado no store, buscando na API...');
         const response = await processService.getProcessById(processId);
         
         if (response.success) {
-          console.log('Processo encontrado na API:', response.data);
           return response.data;
         } else {
           throw new Error(response.message || 'Processo não encontrado');
@@ -329,13 +319,10 @@ export const useProcessesStore = defineStore('processes', {
      */
     async getProcessTasks(processId) {
       try {
-        console.log('Buscando tarefas para o processo:', processId);
         const response = await taskService.getAllTasks({ processId });
-        console.log('Resposta da API para tarefas:', response);
         
         if (response.success) {
           const tasks = response.data.tasks || response.data || [];
-          console.log('Tarefas extraídas:', tasks);
           return tasks;
         } else {
           throw new Error(response.message || 'Erro ao buscar tarefas do processo');
@@ -368,16 +355,12 @@ export const useProcessesStore = defineStore('processes', {
      */
     async getProcessBpmn(processId) {
       try {
-        console.log('[STORE] getProcessBpmn chamado para processo:', processId);
         const response = await processService.getProcessTemplate(processId);
-        console.log('[STORE] Resposta do getProcessTemplate:', response);
         
         if (response.success) {
           const xml = response.data.xml || response.data;
-          console.log('[STORE] XML extraído:', xml ? 'Sim' : 'Não');
           return xml;
         } else {
-          console.error('[STORE] Erro na resposta:', response.message);
           throw new Error(response.message || 'Erro ao buscar diagrama BPMN');
         }
       } catch (error) {
