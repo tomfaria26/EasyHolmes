@@ -22,7 +22,13 @@
 
       <div v-else class="space-y-4">
         <!-- Process Header -->
-        <div class="bg-blue-600 rounded-lg p-6 text-white">
+        <div 
+          class="rounded-lg p-4 text-white"
+          :class="{
+            'bg-blue-600': !isProcessCompleted,
+            'bg-green-600': isProcessCompleted
+          }"
+        >
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <button @click="$router.go(-1)" class="text-white hover:text-blue-100">
@@ -31,12 +37,21 @@
                 </svg>
               </button>
               <div>
-                <h1 class="text-2xl font-bold">{{ getProcessDisplayName() }}</h1>
+                <h1 class="text-xl font-bold">{{ getProcessDisplayName() }}</h1>
                 <div class="flex items-center space-x-4 mt-2">
-                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500 text-white border border-green-400">
-                    Aberto
+                  <span 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                    :class="{
+                      'bg-green-500 text-white border-green-400': !isProcessCompleted,
+                      'bg-green-100 text-green-700 border-green-300': isProcessCompleted
+                    }"
+                  >
+                    {{ isProcessCompleted ? 'Concluído' : 'Aberto' }}
                   </span>
                   <span class="text-blue-100">Criado em {{ formatDate(process?.created_at) }}</span>
+                  <span v-if="isProcessCompleted" class="text-blue-100">
+                    • Concluído em {{ formatDate(processCompletionDate) }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -67,18 +82,49 @@
           <div class="p-6">
             <!-- Tab: Visão Geral -->
             <div v-if="activeTab === 'overview'" class="space-y-4">
+              <!-- Process Completion Notice -->
+              <div v-if="isProcessCompleted" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <div class="ml-2">
+                    <span class="text-sm font-medium text-green-800">
+                      Processo finalizado em {{ formatDate(processCompletionDate) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Status Filters -->
-              <div class="flex items-center space-x-4 w-full max-w-2xl">
-                <label class="text-sm font-medium text-gray-700">Filtrar por status:</label>
-                <select v-model="selectedStatusFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+              <div class="flex items-center space-x-3 mb-4">
+                <label class="text-sm font-medium text-gray-600">Filtrar:</label>
+                <select 
+                  v-model="selectedStatusFilter" 
+                  class="border border-gray-200 rounded-md px-3 py-1.5 text-sm bg-white hover:border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                >
                   <option v-for="filter in statusFilters" :key="filter.value" :value="filter.value">
                     {{ filter.label }}
                   </option>
                 </select>
               </div>
 
+              <!-- Common Completion Date -->
+              <div v-if="allTasksSameCompletionDate" class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                <div class="flex items-center">
+                  <svg class="h-4 w-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                  <span class="text-sm text-gray-600">
+                    Todas as tarefas concluídas em {{ formatDate(commonCompletionDate) }}
+                  </span>
+                </div>
+              </div>
+
               <!-- Task List -->
-              <div class="space-y-3">
+              <div class="space-y-2">
                 <div
                   v-for="task in filteredTasks"
                   :key="task.id"
@@ -91,7 +137,9 @@
                         <span class="flex items-center">
                           <span v-if="task.status === 'in-progress'" class="mr-2 text-base">📅</span>
                           <span v-else-if="task.status === 'completed'" class="mr-2 text-base">✅</span>
-                          {{ getTaskDate(task) }}
+                          <span v-if="!allTasksSameCompletionDate || task.status === 'in-progress'">
+                            {{ getTaskDate(task) }}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -222,6 +270,11 @@ export default {
     const bpmnXml = ref(null)
     const bpmnViewer = ref(null)
     const process = ref(null)
+    const processHistory = ref([])
+    const isProcessCompleted = ref(false)
+    const processCompletionDate = ref(null)
+    const allTasksSameCompletionDate = ref(false)
+    const commonCompletionDate = ref(null)
 
     const tabs = [
       { id: 'overview', name: 'Visão Geral' },
@@ -242,10 +295,20 @@ export default {
         filtered = filtered.filter(task => task.status === 'completed')
       }
       
-      // Ordenar: em andamento primeiro, depois concluídas
+      // Ordenar: em andamento primeiro, depois concluídas, em ordem decrescente por data
       return filtered.sort((a, b) => {
+        // Primeiro: em andamento tem prioridade
         if (a.status === 'in-progress' && b.status !== 'in-progress') return -1
         if (a.status !== 'in-progress' && b.status === 'in-progress') return 1
+        
+        // Segundo: ordenar por data de conclusão (mais recentes primeiro)
+        const dateA = a.completion_date || a.due_date || a.created_at
+        const dateB = b.completion_date || b.due_date || b.created_at
+        
+        if (dateA && dateB) {
+          return new Date(dateB) - new Date(dateA)
+        }
+        
         return 0
       })
     })
@@ -309,6 +372,33 @@ export default {
       }
     }
 
+    const loadProcessHistory = async () => {
+      if (!route.params.id) return
+      
+      try {
+        console.log('Carregando histórico do processo:', route.params.id)
+        const historyData = await processesStore.getProcessHistory(route.params.id)
+        processHistory.value = historyData || []
+        
+        // Verificar se o processo foi concluído
+        const finishEvent = processHistory.value.find(event => event.key === 'history.finish_process')
+        if (finishEvent) {
+          isProcessCompleted.value = true
+          processCompletionDate.value = finishEvent.created_at || finishEvent.timestamp
+          console.log('Processo concluído em:', processCompletionDate.value)
+        } else {
+          isProcessCompleted.value = false
+          processCompletionDate.value = null
+        }
+        
+        console.log('Histórico carregado:', processHistory.value.length, 'eventos')
+      } catch (error) {
+        console.error('Erro ao carregar histórico:', error)
+        isProcessCompleted.value = false
+        processCompletionDate.value = null
+      }
+    }
+
     const loadProcessData = async () => {
       if (!route.params.id) return
       
@@ -321,6 +411,9 @@ export default {
         const processData = await processesStore.getProcessById(route.params.id)
         process.value = processData
         console.log('Dados do processo carregados:', processData)
+        
+        // Carregar histórico do processo para verificar conclusão
+        await loadProcessHistory()
         
         // Carregar tarefas do processo
         console.log('Carregando tarefas do processo...')
@@ -347,6 +440,16 @@ export default {
             due_date: task.due_date || null,
             completion_date: task.completion_date || null
           }))
+          
+          // Verificar se todas as tarefas têm a mesma data de conclusão
+          const completedTasks = allTasks.value.filter(task => task.status === 'completed' && task.completion_date)
+          if (completedTasks.length > 1) {
+            const completionDates = [...new Set(completedTasks.map(task => task.completion_date))]
+            if (completionDates.length === 1) {
+              allTasksSameCompletionDate.value = true
+              commonCompletionDate.value = completionDates[0]
+            }
+          }
         } else {
           allTasks.value = []
         }
@@ -583,6 +686,22 @@ export default {
           })
         })
         
+        // Colorir o botão "fim" se o processo foi concluído
+        if (isProcessCompleted.value) {
+          const endEvents = elementRegistry.filter(el => el.type === 'bpmn:EndEvent')
+          endEvents.forEach(element => {
+            const gfx = elementRegistry.getGraphics(element)
+            if (gfx) {
+              const visual = gfx.querySelector('.djs-visual > *')
+              if (visual) {
+                visual.style.fill = '#10b981'  // Verde para indicar conclusão
+                visual.style.stroke = '#047857' // Verde escuro
+                visual.style.strokeWidth = '3'
+              }
+            }
+          })
+        }
+        
         console.log('[BPMN] Colorização SVG concluída (preservando textos)')
         
       } catch (error) {
@@ -628,6 +747,10 @@ export default {
       loadingBpmn,
       error,
       bpmnXml,
+      isProcessCompleted,
+      processCompletionDate,
+      allTasksSameCompletionDate,
+      commonCompletionDate,
       loadProcessData
     }
   }

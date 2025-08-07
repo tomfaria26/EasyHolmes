@@ -250,10 +250,16 @@ export const useProcessesStore = defineStore('processes', {
      */
     async fetchTasksInternal(params = {}) {
       try {
-        const response = await taskService.getAllTasks(params);
+        // Garantir que busque todas as tarefas sem limitação
+        const response = await taskService.getAllTasks({ 
+          ...params, 
+          limit: 1000, // Buscar mais tarefas
+          status: undefined // Buscar todos os status
+        });
         
         if (response.success) {
           this.tasks = response.data.tasks || response.data || [];
+          console.log(`[STORE] Carregadas ${this.tasks.length} tarefas`);
         } else {
           this.error = response.message || 'Erro ao buscar tarefas';
         }

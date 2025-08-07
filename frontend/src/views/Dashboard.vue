@@ -1,31 +1,21 @@
 <template>
   <div class="space-y-6">
-    <!-- Header do Dashboard -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <div class="flex justify-between items-center">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">
-            Dashboard
-          </h1>
-          <p class="text-gray-600">
-            Bem-vindo ao EasyHolmes! Aqui você pode gerenciar seus processos BPMN.
-          </p>
-        </div>
-        <button
-          @click="refreshData"
-          :disabled="loading"
-          class="btn btn-secondary flex items-center"
-        >
-          <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Atualizar
-        </button>
-      </div>
+    <!-- Botão Atualizar -->
+    <div class="flex justify-end">
+      <button
+        @click="refreshData"
+        :disabled="loading"
+        class="text-gray-500 hover:text-gray-700 flex items-center text-sm transition-colors"
+      >
+        <svg v-if="loading" class="animate-spin mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <svg v-else class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Atualizar
+      </button>
     </div>
 
     <!-- Mensagem de erro -->
@@ -96,82 +86,7 @@
       </div>
     </div>
 
-    <!-- Seção de Ações Rápidas -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Ações Rápidas</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <router-link
-          to="/tasks"
-          class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-        >
-          <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-medium text-gray-900">Gerenciar Tarefas</h4>
-            <p class="text-sm text-gray-600">Visualizar e gerenciar todas as tarefas</p>
-          </div>
-        </router-link>
 
-        <button
-          @click="createNewProcess"
-          class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-left"
-        >
-          <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-medium text-gray-900">Novo Processo</h4>
-            <p class="text-sm text-gray-600">Criar um novo processo BPMN</p>
-          </div>
-        </button>
-
-        <router-link
-          v-if="isAdmin"
-          to="/users"
-          class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-        >
-          <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-            </svg>
-          </div>
-          <div>
-            <h4 class="font-medium text-gray-900">Usuários</h4>
-            <p class="text-sm text-gray-600">Gerenciar usuários do sistema</p>
-          </div>
-        </router-link>
-      </div>
-    </div>
-
-    <!-- Gráfico de Progresso -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Progresso Geral</h3>
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">Tarefas Concluídas</span>
-          <span class="text-sm font-medium text-gray-900">{{ stats.completedTasks }} tarefas ({{ getOverallProgress() }}%)</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-3">
-          <div 
-            class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500"
-            :style="{ width: `${getOverallProgress()}%` }"
-          ></div>
-        </div>
-        <div class="flex justify-between text-xs text-gray-500">
-          <span>0%</span>
-          <span>50%</span>
-          <span>100%</span>
-        </div>
-        <p class="text-xs text-gray-500 mt-2">
-          Baseado em todas as tarefas do sistema (concluídas e em andamento)
-        </p>
-      </div>
-    </div>
 
     <!-- Lista de Processos Recentes -->
     <div class="bg-white shadow rounded-lg p-6">
@@ -202,7 +117,7 @@
 
       <div v-else class="space-y-4">
         <div
-          v-for="process in processes.slice(0, 5)"
+          v-for="process in processes"
           :key="process.id"
           class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
           @click="viewProcessDetail(process)"
@@ -212,16 +127,12 @@
               <div class="flex items-center justify-between mb-2">
                 <h4 class="font-medium text-gray-900">{{ getProcessDisplayName(process) }}</h4>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {{ process.status || 'ativo' }}
+                  {{ translateStatus(process.status) }}
                 </span>
               </div>
               <p class="text-sm text-gray-500 mb-3">{{ process.description || 'Sem descrição' }}</p>
               
               <div class="flex items-center justify-between mt-3">
-                <div class="flex items-center space-x-4 text-xs text-gray-500">
-                  <span>{{ getProcessTasksCount(process.id) }} tarefas</span>
-                  <span>{{ getCompletedTasksCount(process.id) }} concluídas</span>
-                </div>
                 <span class="text-xs text-gray-400">
                   Criado em {{ formatDate(process.created_at) }}
                 </span>
@@ -268,14 +179,7 @@ export default {
       router.push(`/process/${process.id}`)
     }
 
-    const getProcessTasksCount = (processId) => {
-      return processesStore.tasksByProcess(processId).length
-    }
 
-    const getCompletedTasksCount = (processId) => {
-      const tasks = processesStore.tasksByProcess(processId)
-      return tasks.filter(task => task.status === 'completed').length
-    }
 
 
 
@@ -310,11 +214,7 @@ export default {
       return Math.round((stats.value.completedTasks / total) * 100)
     }
 
-    const createNewProcess = () => {
-      // Por enquanto, navegar para a página de tarefas
-      router.push('/tasks')
-      showSuccess('Funcionalidade de criação de processo será implementada em breve!')
-    }
+
 
     const getProcessDisplayName = (process) => {
       // Priorizar o identificador do processo se disponível (nome completo)
@@ -329,8 +229,28 @@ export default {
       }
     }
 
+    const translateStatus = (status) => {
+      switch (status?.toLowerCase()) {
+        case 'opened':
+        case 'open':
+        case 'active':
+          return 'Aberto'
+        case 'closed':
+        case 'completed':
+          return 'Fechado'
+        case 'inactive':
+          return 'Inativo'
+        case 'in_progress':
+          return 'Em Andamento'
+        default:
+          return status || 'Ativo'
+      }
+    }
+
     onMounted(async () => {
       await processesStore.initializeData()
+      console.log(`[DASHBOARD] Processos carregados: ${processesStore.processes.length}`)
+      console.log(`[DASHBOARD] Tarefas carregadas: ${processesStore.tasks.length}`)
     })
 
     return {
@@ -341,12 +261,9 @@ export default {
       isAdmin,
       refreshData,
       viewProcessDetail,
-      getProcessTasksCount,
-      getCompletedTasksCount,
       formatDate,
-      getOverallProgress,
-      createNewProcess,
-      getProcessDisplayName
+      getProcessDisplayName,
+      translateStatus
     }
   }
 }
