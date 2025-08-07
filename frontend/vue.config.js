@@ -21,5 +21,12 @@ module.exports = defineConfig({
         "crypto": false
       }
     }
+  },
+  chainWebpack: config => {
+    config.plugin('define').tap(args => {
+      args[0].__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = 'false'
+      args[0].__VUE_PROD_DEVTOOLS__ = 'false'
+      return args
+    })
   }
 }) 

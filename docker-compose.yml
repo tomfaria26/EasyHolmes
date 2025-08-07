@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: easyholmes-backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -30,10 +30,10 @@ services:
       dockerfile: Dockerfile
     container_name: easyholmes-frontend
     ports:
-      - "8080:8080"
+      - "8083:8080"
     environment:
       - NODE_ENV=development
-      - VUE_APP_API_URL=http://localhost:3000
+      - VUE_APP_API_URL=${VUE_APP_API_URL}
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -50,7 +50,7 @@ services:
       - POSTGRES_USER=easyholmes
       - POSTGRES_PASSWORD=easyholmes123
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

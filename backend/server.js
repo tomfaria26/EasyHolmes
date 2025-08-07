@@ -22,8 +22,8 @@ app.use(morgan('combined'));
 // Configuração CORS
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['http://localhost:8080'] 
-    : ['http://localhost:8080', 'http://127.0.0.1:8080'],
+    ? ['http://localhost:8083', 'http://192.168.254.23:8083'] 
+    : ['http://localhost:8080', 'http://localhost:8083', 'http://127.0.0.1:8080', 'http://127.0.0.1:8083', 'http://192.168.254.23:8083'],
   credentials: true
 }));
 
