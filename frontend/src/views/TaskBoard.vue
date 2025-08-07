@@ -162,31 +162,31 @@
           </h3>
 
                      <div class="space-y-3 min-h-[200px]">
-             <div
-               v-for="task in filteredTasks.filter(t => t.status === 'in-progress')"
-               :key="task.id"
-               class="bg-white rounded-lg p-4 shadow-sm border border-yellow-200 cursor-pointer hover:shadow-md transition-shadow"
-               @click="openTaskDetails(task)"
-             >
-              <div class="flex justify-between items-start mb-2">
-                <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
-              </div>
-              <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-500 flex items-center">
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  Criada: {{ formatDate(task.created_at, false) }}
-                </span>
-                <span v-if="task.due_date" class="text-xs flex items-center" :class="getSlaColor(task.due_date)">
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                  </svg>
-                  SLA: {{ formatDate(task.due_date, false) }}
-                </span>
-              </div>
-            </div>
+                         <div
+              v-for="task in filteredTasks.filter(t => t.status === 'in-progress')"
+              :key="task.id"
+              class="bg-white rounded-lg p-4 shadow-sm border-l-4 border-l-orange-400 border border-gray-200 cursor-pointer hover:shadow-md transition-all duration-200"
+              @click="openTaskDetails(task)"
+            >
+             <div class="flex justify-between items-start mb-2">
+               <h4 class="font-medium text-gray-900 text-sm">{{ task.name || 'Tarefa sem nome' }}</h4>
+             </div>
+             <p class="text-xs text-gray-600 mb-2">{{ task.processIdentifier || 'Processo não encontrado' }}</p>
+             <div class="flex justify-between items-center">
+               <span class="text-xs text-gray-500 flex items-center">
+                 <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                 </svg>
+                 Criada: {{ formatDate(task.created_at, false) }}
+               </span>
+               <span v-if="task.due_date" class="text-xs flex items-center" :class="getSlaColor(task.due_date)">
+                 <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                 </svg>
+                 SLA: {{ formatDate(task.due_date, false) }}
+               </span>
+             </div>
+           </div>
           </div>
         </div>
 
@@ -203,20 +203,20 @@
                          <div class="flex space-x-2" v-if="Object.keys(groupedCompletedTasks).length > 0">
                <button
                  @click="expandAllGroups"
-                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors flex items-center"
                  title="Expandir todos os grupos"
                >
-                 <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <svg class="w-3 h-3 mr-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                  </svg>
                  Expandir
                </button>
                <button
                  @click="collapseAllGroups"
-                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                 class="text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition-colors flex items-center"
                  title="Recolher todos os grupos"
                >
-                 <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <svg class="w-3 h-3 mr-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                  </svg>
                  Recolher
@@ -233,13 +233,13 @@
              >
                <!-- Header do grupo -->
                <div
-                 class="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                 class="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors sticky top-0 z-10"
                  @click="toggleProcessGroup(processIdentifier)"
                >
                  <div class="flex items-center space-x-2">
                    <svg
                      :class="[
-                       'w-4 h-4 text-gray-600 transition-transform duration-200',
+                       'w-4 h-4 text-gray-600 transition-transform duration-300 ease-in-out',
                        expandedGroups.includes(processIdentifier) ? 'rotate-90' : ''
                      ]"
                      fill="none"
@@ -261,14 +261,22 @@
                </div>
 
                              <!-- Conteúdo do grupo (dropdown) -->
-               <div
-                 v-show="expandedGroups.includes(processIdentifier)"
-                 class="divide-y divide-gray-100"
+               <transition
+                 enter-active-class="transition-all duration-300 ease-out"
+                 enter-from-class="opacity-0 max-h-0"
+                 enter-to-class="opacity-100 max-h-96"
+                 leave-active-class="transition-all duration-200 ease-in"
+                 leave-from-class="opacity-100 max-h-96"
+                 leave-to-class="opacity-0 max-h-0"
                >
+                 <div
+                   v-show="expandedGroups.includes(processIdentifier)"
+                   class="divide-y divide-gray-100 overflow-hidden"
+                 >
                 <div
                   v-for="task in processGroup"
                   :key="task.id"
-                  class="p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                  class="p-3 hover:bg-gray-50 transition-all duration-200 cursor-pointer border-l-4 border-l-green-400"
                   @click="openTaskDetails(task)"
                 >
                   <div class="flex justify-between items-start mb-2">
@@ -289,8 +297,9 @@
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
+                 </div>
+               </transition>
+             </div>
 
             <!-- Estado vazio para tarefas concluídas -->
             <div v-if="Object.keys(groupedCompletedTasks).length === 0" class="text-center py-8">
@@ -364,24 +373,24 @@
               </span>
             </div>
 
-            <!-- Data de Criação -->
-            <div class="flex items-center">
-              <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span class="text-sm font-medium text-gray-700 mr-2">Criada:</span>
-              <span class="text-sm text-gray-600">{{ formatDate(selectedTask?.created_at, false) }}</span>
-            </div>
-
-            <!-- SLA -->
-            <div v-if="selectedTask?.due_date" class="flex items-center">
-              <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <span class="text-sm font-medium text-gray-700 mr-2">SLA:</span>
-              <span class="text-sm" :class="getSlaColor(selectedTask?.due_date)">
-                {{ formatDate(selectedTask?.due_date, false) }}
-              </span>
+            <!-- Datas Agrupadas -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-sm font-medium text-gray-700 mr-2">Criada:</span>
+                <span class="text-sm text-gray-600">{{ formatDate(selectedTask?.created_at, false) }}</span>
+              </div>
+              <div v-if="selectedTask?.due_date" class="flex items-center">
+                <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="text-sm font-medium text-gray-700 mr-2">SLA:</span>
+                <span class="text-sm" :class="getSlaColor(selectedTask?.due_date)">
+                  {{ formatDate(selectedTask?.due_date, false) }}
+                </span>
+              </div>
             </div>
 
             <!-- Data de Conclusão -->
@@ -411,24 +420,27 @@
                 </label>
                 <!-- Propriedade somente leitura -->
                 <template v-if="property.read_only === true">
-                  <span 
-                    class="inline-block w-full bg-gray-100 px-3 py-2 rounded-md text-gray-600 border border-gray-300 cursor-not-allowed select-none pointer-events-none user-select-none"
-                    style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; pointer-events: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"
-                    @click.prevent
-                    @keydown.prevent
-                    @input.prevent
-                    @focus.prevent
-                    @blur.prevent
-                    @mousedown.prevent
-                    @mouseup.prevent
-                    @touchstart.prevent
-                    @touchend.prevent
-                    tabindex="-1"
-                    contenteditable="false"
-                    unselectable="on"
-                  >
-                    {{ property.value || '—' }}
-                  </span>
+                  <div class="flex items-center space-x-2">
+                    <span 
+                      v-if="isBooleanValue(property.value)"
+                      class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium"
+                      :class="getBooleanBadgeClass(property.value)"
+                    >
+                      <svg v-if="property.value === true || property.value === 'true'" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <svg v-else class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                      {{ getReadableValue(property.value) }}
+                    </span>
+                    <span 
+                      v-else
+                      class="inline-block w-full bg-gray-50 px-3 py-2 rounded-md text-gray-700 border border-gray-200"
+                    >
+                      {{ getReadableValue(property.value) }}
+                    </span>
+                  </div>
                 </template>
                 <!-- Dropdown -->
                 <template v-else-if="property.options && property.options.length > 0">
@@ -473,14 +485,14 @@
         <div class="flex justify-end space-x-3 p-6 border-t border-gray-200">
           <button
             @click="closeTaskModal"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="px-4 py-2 text-sm font-medium text-gray-500 bg-transparent border border-gray-200 rounded-md hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
           >
             {{ selectedTask?.status === 'completed' ? 'Fechar' : 'Cancelar' }}
           </button>
           <button
             v-if="selectedTask?.status !== 'completed'"
             @click="completeTask"
-            :disabled="updatingTasks.includes(selectedTask?.id)"
+            :disabled="updatingTasks.includes(selectedTask?.id) || !hasRequiredFieldsFilled"
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             <svg v-if="updatingTasks.includes(selectedTask?.id)" class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -554,7 +566,7 @@
             <!-- Instância -->
             <div>
               <label for="instancia" class="block text-sm font-medium text-gray-700 mb-1">
-                Instância *
+                Obra *
               </label>
               <select
                 id="instancia"
@@ -563,7 +575,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 :disabled="loadingInstances"
               >
-                <option value="">Selecione uma instância</option>
+                <option value="">Selecione uma Obra</option>
                 <option
                   v-for="instance in instances"
                   :key="instance.id"
@@ -573,7 +585,7 @@
                 </option>
               </select>
               <div v-if="loadingInstances" class="mt-1 text-sm text-gray-500">
-                Carregando instâncias...
+                Carregando Obras...
               </div>
             </div>
           </form>
@@ -1215,7 +1227,49 @@ export default {
       await processesStore.initializeData()
     })
 
-    
+    // Funções auxiliares para melhorar a UX dos campos somente leitura
+    const isBooleanValue = (value) => {
+      return value === true || value === false || value === 'true' || value === 'false'
+    }
+
+    const getReadableValue = (value) => {
+      if (value === null || value === undefined || value === '') {
+        return '—'
+      }
+      if (value === true || value === 'true') {
+        return 'Sim'
+      }
+      if (value === false || value === 'false') {
+        return 'Não'
+      }
+      return value.toString()
+    }
+
+    const getBooleanBadgeClass = (value) => {
+      if (value === true || value === 'true') {
+        return 'bg-green-100 text-green-800 border border-green-200'
+      } else {
+        return 'bg-red-100 text-red-800 border border-red-200'
+      }
+    }
+
+    // Validação de campos obrigatórios
+    const hasRequiredFieldsFilled = computed(() => {
+      if (!selectedTask.value || selectedTask.value.status === 'completed') {
+        return true
+      }
+
+      const requiredProperties = taskProperties.value.filter(p => p.required && !p.hidden)
+      
+      for (const property of requiredProperties) {
+        const value = selectedPropertyValues.value[property.id]
+        if (!value || value === '') {
+          return false
+        }
+      }
+      
+      return true
+    })
 
     return {
       loading,
@@ -1271,8 +1325,59 @@ export default {
       createNewProcess,
       getProcessName,
       formatDate,
-      getSlaColor
+      getSlaColor,
+      isBooleanValue,
+      getReadableValue,
+      getBooleanBadgeClass,
+      hasRequiredFieldsFilled
     }
   }
 }
-</script> 
+</script>
+
+<style scoped>
+/* Animações para os grupos de tarefas */
+.group-enter-active,
+.group-leave-active {
+  transition: all 0.3s ease;
+}
+
+.group-enter-from,
+.group-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Sticky header com sombra sutil */
+.sticky {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Melhorar transições dos cards */
+.task-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.task-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Animação suave para ícones de expandir */
+.expand-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Melhorar bordas laterais */
+.border-l-4 {
+  border-left-width: 4px;
+}
+
+.border-l-orange-400 {
+  border-left-color: #fb923c;
+}
+
+.border-l-green-400 {
+  border-left-color: #4ade80;
+}
+</style> 

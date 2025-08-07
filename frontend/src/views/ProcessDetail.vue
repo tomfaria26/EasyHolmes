@@ -43,7 +43,7 @@
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
                     :class="{
                       'bg-green-500 text-white border-green-400': !isProcessCompleted,
-                      'bg-green-100 text-green-700 border-green-300': isProcessCompleted
+                      'bg-green-50 text-green-700 border-green-200': isProcessCompleted
                     }"
                   >
                     {{ isProcessCompleted ? 'Concluído' : 'Aberto' }}
@@ -118,7 +118,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                   <span class="text-sm text-gray-600">
-                    Todas as tarefas concluídas em {{ formatDate(commonCompletionDate) }}
+                    Tarefas concluídas em {{ formatDate(commonCompletionDate) }}
                   </span>
                 </div>
               </div>
@@ -128,12 +128,12 @@
                 <div
                   v-for="task in filteredTasks"
                   :key="task.id"
-                  class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:bg-gray-50 transition-colors"
+                  class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:bg-gray-50 transition-colors"
                 >
                   <div class="flex items-center justify-between">
                     <div class="flex-1 min-w-0">
                       <h4 class="font-medium text-gray-900 truncate">{{ task.name }}</h4>
-                      <div class="flex items-center mt-3 text-sm text-gray-500">
+                      <div class="flex items-center mt-2 text-sm text-gray-500">
                         <span class="flex items-center">
                           <span v-if="task.status === 'in-progress'" class="mr-2 text-base">📅</span>
                           <span v-else-if="task.status === 'completed'" class="mr-2 text-base">✅</span>
@@ -441,13 +441,31 @@ export default {
             completion_date: task.completion_date || null
           }))
           
-          // Verificar se todas as tarefas têm a mesma data de conclusão
+          // Verificar se todas ou quase todas as tarefas têm a mesma data de conclusão
           const completedTasks = allTasks.value.filter(task => task.status === 'completed' && task.completion_date)
           if (completedTasks.length > 1) {
             const completionDates = [...new Set(completedTasks.map(task => task.completion_date))]
             if (completionDates.length === 1) {
+              // Todas as tarefas concluídas têm a mesma data
               allTasksSameCompletionDate.value = true
               commonCompletionDate.value = completionDates[0]
+            } else if (completionDates.length === 2) {
+              // Verificar se "quase todas" têm a mesma data (80% ou mais)
+              const dateCounts = {}
+              completedTasks.forEach(task => {
+                dateCounts[task.completion_date] = (dateCounts[task.completion_date] || 0) + 1
+              })
+              
+              const mostCommonDate = Object.keys(dateCounts).reduce((a, b) => 
+                dateCounts[a] > dateCounts[b] ? a : b
+              )
+              const mostCommonCount = dateCounts[mostCommonDate]
+              const percentage = (mostCommonCount / completedTasks.length) * 100
+              
+              if (percentage >= 80) {
+                allTasksSameCompletionDate.value = true
+                commonCompletionDate.value = mostCommonDate
+              }
             }
           }
         } else {

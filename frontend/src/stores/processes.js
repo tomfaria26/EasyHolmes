@@ -38,10 +38,24 @@ export const useProcessesStore = defineStore('processes', {
     },
 
     /**
-     * Processos ativos
+     * Processos ativos (com tarefas em andamento ou status active)
      */
     activeProcesses: (state) => {
-      return (state.processes || []).filter(process => process.status === 'active');
+      const processes = state.processes || [];
+      const tasks = state.tasks || [];
+      
+      return processes.filter(process => {
+        // Se o processo tem status 'active', 'opened' ou similar, é ativo
+        if (process.status === 'active' || process.status === 'opened' || process.status === 'open') {
+          return true;
+        }
+        
+        // Se o processo tem tarefas em andamento, é ativo
+        const processTasks = tasks.filter(task => task.processId === process.id);
+        const hasInProgressTasks = processTasks.some(task => task.status === 'in-progress');
+        
+        return hasInProgressTasks;
+      });
     }
   },
 
@@ -197,12 +211,24 @@ export const useProcessesStore = defineStore('processes', {
      * Atualizar estatísticas
      */
     updateStats() {
+      const activeProcessesCount = this.activeProcesses.length;
+      const inProgressTasksCount = this.tasksByStatus.inProgress.length;
+      const completedTasksCount = this.tasksByStatus.completed.length;
+      
       this.stats = {
-        activeProcesses: this.activeProcesses.length,
-        pendingTasks: this.tasksByStatus.pending.length,
-        inProgressTasks: this.tasksByStatus.inProgress.length,
-        completedTasks: this.tasksByStatus.completed.length
+        activeProcesses: activeProcessesCount,
+        pendingTasks: 0, // Removido conforme solicitado anteriormente
+        inProgressTasks: inProgressTasksCount,
+        completedTasks: completedTasksCount
       };
+      
+      console.log('[STORE] Estatísticas atualizadas:', {
+        activeProcesses: activeProcessesCount,
+        inProgressTasks: inProgressTasksCount,
+        completedTasks: completedTasksCount,
+        totalProcesses: this.processes.length,
+        totalTasks: this.tasks.length
+      });
     },
 
     /**
