@@ -264,6 +264,92 @@ class ProcessController {
       });
     }
   }
+
+  /**
+   * Invalidar cache de um processo específico
+   * POST /api/processes/:id/invalidate-cache
+   */
+  async invalidateProcessCache(req, res) {
+    try {
+      const { id } = req.params;
+      
+      // Invalidar cache do processo
+      holmesService.invalidateProcessCache(id);
+      
+      res.json({
+        success: true,
+        message: `Cache do processo ${id} invalidado com sucesso`
+      });
+    } catch (error) {
+      console.error(`Erro ao invalidar cache do processo ${req.params.id}:`, error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Limpar todo o cache
+   * POST /api/processes/clear-cache
+   */
+  async clearAllCache(req, res) {
+    try {
+      // Limpar todo o cache
+      holmesService.clearCache();
+      
+      res.json({
+        success: true,
+        message: 'Todo o cache foi limpo com sucesso'
+      });
+    } catch (error) {
+      console.error('Erro ao limpar cache:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Atualizar dados automaticamente (buscar dados atualizados)
+   * POST /api/processes/refresh
+   */
+  async refreshData(req, res) {
+    try {
+      console.log('[REFRESH] Iniciando busca de dados atualizados...');
+      
+      // Buscar processos ativos
+      const activeProcesses = await holmesService.getActiveProcesses();
+      
+      // Buscar tarefas ativas
+      const activeTasks = await holmesService.getAllActiveTasks();
+      
+      console.log(`[REFRESH] Busca concluída: ${activeProcesses.processes?.length || 0} processos ativos, ${activeTasks.length} tarefas`);
+      
+      res.json({
+        success: true,
+        message: 'Dados atualizados com sucesso',
+        data: {
+          processes: activeProcesses.processes || [],
+          tasks: activeTasks,
+          summary: {
+            activeProcesses: activeProcesses.processes?.length || 0,
+            activeTasks: activeTasks.length,
+            dataFresh: true
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+
 }
 
 module.exports = new ProcessController(); 

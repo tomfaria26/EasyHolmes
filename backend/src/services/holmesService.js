@@ -5,14 +5,14 @@ const axios = require('axios');
  */
 const requestCache = new Map();
 
-// TTLs diferentes para diferentes tipos de dados
+// TTLs diferentes para diferentes tipos de dados - REDUZIDOS para evitar problemas de duplicação
 const CACHE_TTL = {
-  PROCESSES: 10 * 60 * 1000,        // 10 minutos para processos
-  PROCESS_HISTORY: 30 * 1000,       // 30 segundos para histórico (muda muito frequentemente)
-  TASK_DETAILS: 5 * 60 * 1000,      // 5 minutos para detalhes de tarefas
-  PROPERTY_OPTIONS: 30 * 60 * 1000, // 30 minutos para opções de propriedades
-  TEMPLATES: 60 * 60 * 1000,        // 1 hora para templates
-  DEFAULT: 5 * 60 * 1000            // 5 minutos padrão
+  PROCESSES: 2 * 60 * 1000,         // 2 minutos para processos (reduzido de 10)
+  PROCESS_HISTORY: 15 * 1000,       // 15 segundos para histórico (reduzido de 30)
+  TASK_DETAILS: 1 * 60 * 1000,      // 1 minuto para detalhes de tarefas (reduzido de 5)
+  PROPERTY_OPTIONS: 10 * 60 * 1000, // 10 minutos para opções de propriedades (reduzido de 30)
+  TEMPLATES: 30 * 60 * 1000,        // 30 minutos para templates (reduzido de 60)
+  DEFAULT: 1 * 60 * 1000            // 1 minuto padrão (reduzido de 5)
 };
 
 /**
@@ -58,6 +58,8 @@ async function parallelRequests(requests) {
   }
 }
 
+
+
 /**
  * Função para invalidar cache de histórico de processos
  */
@@ -99,33 +101,59 @@ function invalidateProcessHistoryCache(processId, taskId, operation = 'operaçã
  */
 class HolmesService {
   /**
-   * Buscar todos os processos (com cache)
+   * Buscar todos os processos (sem cache)
    */
   async getProcesses() {
-    return cachedRequest('processes', async () => {
-      try {
-        const response = await holmesClient.get('/processes/');
-        return response.data;
-      } catch (error) {
-        console.error('Erro ao buscar processos:', error.message);
-        throw new Error('Falha ao buscar processos do Holmes');
-      }
-    }, CACHE_TTL.PROCESSES);
+    try {
+      console.log('[CACHE] Buscando processos diretamente do Holmes (sem cache)');
+      const response = await holmesClient.get('/processes/');
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar processos:', error.message);
+      throw new Error('Falha ao buscar processos do Holmes');
+    }
   }
 
   /**
-   * Buscar processo por ID (com cache)
+   * Buscar processos ativos (sem cache)
+   */
+  async getActiveProcesses() {
+    try {
+      console.log('[CACHE] Buscando processos ativos diretamente do Holmes (sem cache)');
+      
+      // Buscar processos atualizados
+      const response = await holmesClient.get('/processes/');
+      const allProcesses = response.data;
+      
+      // Filtrar apenas processos ativos (não cancelados/excluídos)
+      const activeProcesses = allProcesses.processes?.filter(process => 
+        process.status !== 'canceled' && 
+        process.status !== 'cancelled' &&
+        process.status !== 'deleted' &&
+        process.status !== 'terminated'
+      ) || [];
+      
+      console.log(`[CACHE] ${activeProcesses.length} processos ativos encontrados de ${allProcesses.processes?.length || 0} total`);
+      
+      return { ...allProcesses, processes: activeProcesses };
+    } catch (error) {
+      console.error('Erro ao buscar processos ativos:', error.message);
+      throw new Error('Falha ao buscar processos ativos do Holmes');
+    }
+  }
+
+  /**
+   * Buscar processo por ID (sem cache)
    */
   async getProcessById(processId) {
-    return cachedRequest(`process_${processId}`, async () => {
-      try {
-        const response = await holmesClient.get(`/processes/${processId}`);
-        return response.data;
-      } catch (error) {
-        console.error(`Erro ao buscar processo ${processId}:`, error.message);
-        throw new Error('Falha ao buscar processo do Holmes');
-      }
-    }, CACHE_TTL.DEFAULT);
+    try {
+      console.log(`[CACHE] Buscando processo ${processId} diretamente do Holmes (sem cache)`);
+      const response = await holmesClient.get(`/processes/${processId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar processo ${processId}:`, error.message);
+      throw new Error('Falha ao buscar processo do Holmes');
+    }
   }
 
   /**
@@ -145,22 +173,20 @@ class HolmesService {
   }
 
   /**
-   * Buscar instâncias disponíveis (com cache)
+   * Buscar instâncias disponíveis (sem cache)
    */
   async getInstances(entityId, searchPayload = {}) {
-    const cacheKey = `instances_${entityId}_${JSON.stringify(searchPayload)}`;
-    return cachedRequest(cacheKey, async () => {
-      try {
-        const response = await holmesClient.post(
-          `/entities/${entityId}/instances/search`,
-          searchPayload
-        );
-        return response.data;
-      } catch (error) {
-        console.error('Erro ao buscar instâncias:', error.message);
-        throw new Error('Falha ao buscar instâncias do Holmes');
-      }
-    }, CACHE_TTL.DEFAULT);
+    try {
+      console.log(`[CACHE] Buscando instâncias diretamente do Holmes (sem cache)`);
+      const response = await holmesClient.post(
+        `/entities/${entityId}/instances/search`,
+        searchPayload
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar instâncias:', error.message);
+      throw new Error('Falha ao buscar instâncias do Holmes');
+    }
   }
 
   /**
@@ -254,37 +280,34 @@ class HolmesService {
   }
 
   /**
-   * Buscar histórico de um processo (com cache)
+   * Buscar histórico de um processo (sem cache)
    */
   async getProcessHistory(processId, historyPayload = {}) {
-    const cacheKey = `history_${processId}_${JSON.stringify(historyPayload)}`;
-    return cachedRequest(cacheKey, async () => {
-      try {
-        const response = await holmesClient.post(
-          `/processes/${processId}/history`,
-          historyPayload
-        );
-        return response.data;
-      } catch (error) {
-        console.error(`Erro ao buscar histórico do processo ${processId}:`, error.message);
-        throw new Error('Falha ao buscar histórico do processo');
-      }
-    }, CACHE_TTL.PROCESS_HISTORY);
+    try {
+      console.log(`[CACHE] Buscando histórico do processo ${processId} diretamente do Holmes (sem cache)`);
+      const response = await holmesClient.post(
+        `/processes/${processId}/history`,
+        historyPayload
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar histórico do processo ${processId}:`, error.message);
+      throw new Error('Falha ao buscar histórico do processo');
+    }
   }
 
   /**
-   * Buscar detalhes de uma tarefa (com cache)
+   * Buscar detalhes de uma tarefa (sem cache)
    */
   async getTaskDetails(taskId) {
-    return cachedRequest(`task_${taskId}`, async () => {
-      try {
-        const response = await holmesClient.get(`/tasks/${taskId}`);
-        return response.data;
-      } catch (error) {
-        console.error(`Erro ao buscar tarefa ${taskId}:`, error.message);
-        throw new Error('Falha ao buscar detalhes da tarefa');
-      }
-    }, CACHE_TTL.TASK_DETAILS);
+    try {
+      console.log(`[CACHE] Buscando detalhes da tarefa ${taskId} diretamente do Holmes (sem cache)`);
+      const response = await holmesClient.get(`/tasks/${taskId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar tarefa ${taskId}:`, error.message);
+      throw new Error('Falha ao buscar detalhes da tarefa');
+    }
   }
 
   /**
@@ -489,18 +512,53 @@ class HolmesService {
   }
 
   /**
-   * Buscar tarefas de um processo (com cache)
+   * Buscar tarefas de um processo (sem cache)
    */
   async getProcessTasks(processId) {
-    return cachedRequest(`process_tasks_${processId}`, async () => {
-      try {
-        const response = await holmesClient.get(`/processes/${processId}/tasks`);
-        return response.data;
-      } catch (error) {
-        console.error(`Erro ao buscar tarefas do processo ${processId}:`, error.message);
-        throw new Error('Falha ao buscar tarefas do processo');
+    try {
+      console.log(`[CACHE] Buscando tarefas do processo ${processId} diretamente do Holmes (sem cache)`);
+      const response = await holmesClient.get(`/processes/${processId}/tasks`);
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar tarefas do processo ${processId}:`, error.message);
+      throw new Error('Falha ao buscar tarefas do processo');
+    }
+  }
+
+  /**
+   * Buscar todas as tarefas ativas (sem cache)
+   */
+  async getAllActiveTasks() {
+    try {
+      console.log('[CACHE] Buscando todas as tarefas ativas diretamente do Holmes (sem cache)');
+      
+      // Buscar processos ativos
+      const activeProcesses = await this.getActiveProcesses();
+      
+      // Buscar tarefas de todos os processos ativos
+      const allTasks = [];
+      const activeProcessIds = activeProcesses.processes?.map(p => p.id) || [];
+      
+      console.log(`[CACHE] Buscando tarefas de ${activeProcessIds.length} processos ativos...`);
+      
+      for (const processId of activeProcessIds) {
+        try {
+          const processTasks = await this.getProcessTasks(processId);
+          if (processTasks && processTasks.tasks) {
+            allTasks.push(...processTasks.tasks);
+          }
+        } catch (error) {
+          console.warn(`[CACHE] Erro ao buscar tarefas do processo ${processId}:`, error.message);
+        }
       }
-    }, CACHE_TTL.DEFAULT);
+      
+      console.log(`[CACHE] ${allTasks.length} tarefas encontradas de processos ativos`);
+      
+      return allTasks;
+    } catch (error) {
+      console.error('Erro ao buscar tarefas ativas:', error.message);
+      throw new Error('Falha ao buscar tarefas ativas');
+    }
   }
 
   /**
@@ -526,43 +584,41 @@ class HolmesService {
   }
 
   /**
-   * Buscar opções de uma propriedade (com cache)
+   * Buscar opções de uma propriedade (sem cache)
    */
   async getPropertyOptions(propertyTypeId) {
-    return cachedRequest(`property_options_${propertyTypeId}`, async () => {
-      try {
-        console.log(`[DEBUG] Buscando opções para propertyTypeId: ${propertyTypeId}`);
-        
-        // Payload baseado no exemplo do Python
-        const searchPayload = {
-          "query": {
-            "from": 0,
-            "size": 200,
-            "order": "asc",
-            "groups": [{
-              "match_all": true,
-              "terms": [{
-                "field": "entity_id",
-                "type": "is",
-                "value": propertyTypeId
-              }]
-            }],
-            "sort": "8547a640-504b-11f0-a2c8-75d9e0938171"
-          }
-        };
-        
-        const response = await holmesClient.post(`/entities/${propertyTypeId}/instances/search`, searchPayload);
-        console.log(`[DEBUG] Resposta da API para ${propertyTypeId}:`, JSON.stringify(response.data, null, 2));
-        return response.data;
-      } catch (error) {
-        console.error(`Erro ao buscar opções da propriedade ${propertyTypeId}:`, error.message);
-        if (error.response) {
-          console.error(`[DEBUG] Status code: ${error.response.status}`);
-          console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
+    try {
+      console.log(`[CACHE] Buscando opções da propriedade ${propertyTypeId} diretamente do Holmes (sem cache)`);
+      
+      // Payload baseado no exemplo do Python
+      const searchPayload = {
+        "query": {
+          "from": 0,
+          "size": 200,
+          "order": "asc",
+          "groups": [{
+            "match_all": true,
+            "terms": [{
+              "field": "entity_id",
+              "type": "is",
+              "value": propertyTypeId
+            }]
+          }],
+          "sort": "8547a640-504b-11f0-a2c8-75d9e0938171"
         }
-        throw new Error('Falha ao buscar opções da propriedade');
+      };
+      
+      const response = await holmesClient.post(`/entities/${propertyTypeId}/instances/search`, searchPayload);
+      console.log(`[DEBUG] Resposta da API para ${propertyTypeId}:`, JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error) {
+      console.error(`Erro ao buscar opções da propriedade ${propertyTypeId}:`, error.message);
+      if (error.response) {
+        console.error(`[DEBUG] Status code: ${error.response.status}`);
+        console.error(`[DEBUG] Response data:`, JSON.stringify(error.response.data, null, 2));
       }
-    }, CACHE_TTL.PROPERTY_OPTIONS);
+      throw new Error('Falha ao buscar opções da propriedade');
+    }
   }
 
   /**
@@ -612,12 +668,47 @@ class HolmesService {
     }
   }
 
+
+
+  /**
+   * Invalidar cache de um processo específico (útil quando processo é excluído no Holmes)
+   */
+  invalidateProcessCache(processId) {
+    const cacheKeys = Array.from(requestCache.keys());
+    const processKeys = cacheKeys.filter(key => 
+      key === 'processes' || 
+      key === `process_${processId}` || 
+      key.startsWith(`history_${processId}_`) ||
+      key.startsWith(`process_tasks_${processId}`)
+    );
+    
+    if (processKeys.length > 0) {
+      console.log(`[CACHE] Invalidando ${processKeys.length} chaves de cache do processo ${processId}`);
+      processKeys.forEach(key => {
+        requestCache.delete(key);
+        console.log(`[CACHE] Removido: ${key}`);
+      });
+    }
+    
+    console.log(`[CACHE] Cache invalidado para processo ${processId}`);
+  }
+
   /**
    * Limpar cache (útil para testes ou quando dados mudam)
    */
   clearCache() {
     requestCache.clear();
     console.log('[CACHE] Cache limpo');
+  }
+
+  /**
+   * Obter estatísticas do cache
+   */
+  getCacheStats() {
+    return {
+      size: requestCache.size,
+      keys: Array.from(requestCache.keys())
+    };
   }
 
   /**

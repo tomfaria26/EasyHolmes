@@ -25,4 +25,7 @@ router.patch('/:id/status', taskController.updateTaskStatus);
 // POST /api/tasks/:id/complete - Concluir uma tarefa
 router.post('/:id/complete', taskController.completeTask);
 
+// POST /api/tasks/refresh - Atualizar tarefas automaticamente
+router.post('/refresh', taskController.refreshTasks);
+
 module.exports = router; 

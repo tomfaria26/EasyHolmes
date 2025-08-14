@@ -664,6 +664,46 @@ class TaskController {
   }
 
   /**
+   * Atualizar tarefas automaticamente (buscar dados atualizados)
+   * POST /api/tasks/refresh
+   */
+  async refreshTasks(req, res) {
+    try {
+      console.log('[TASKS-REFRESH] Iniciando busca de tarefas atualizadas...');
+      
+      // Usar a nova funcionalidade sem cache
+      const activeTasks = await holmesService.getAllActiveTasks();
+      
+      // Filtrar apenas tarefas de processos ativos
+      const filteredTasks = activeTasks.filter(task => {
+        // Verificar se a tarefa pertence a um processo ativo
+        return task && task.process_id;
+      });
+      
+      console.log(`[TASKS-REFRESH] Busca concluída: ${filteredTasks.length} tarefas ativas encontradas`);
+      
+      res.json({
+        success: true,
+        message: 'Tarefas atualizadas com sucesso',
+        data: {
+          tasks: filteredTasks,
+          summary: {
+            activeTasks: filteredTasks.length,
+            dataFresh: true,
+            lastUpdate: new Date().toISOString()
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar tarefas:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: error.message
+      });
+    }
+  }
+
+  /**
    * Buscar tarefas por status (sem paginação - sempre retorna todas)
    * GET /api/tasks/status/:status
    */

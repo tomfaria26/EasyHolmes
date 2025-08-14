@@ -32,4 +32,13 @@ router.post('/:id/history', processController.getProcessHistory);
 // GET /api/processes/:id/template - Buscar template BPMN de um processo
 router.get('/:id/template', processController.getProcessTemplate);
 
+// POST /api/processes/:id/invalidate-cache - Invalidar cache de um processo específico
+router.post('/:id/invalidate-cache', processController.invalidateProcessCache);
+
+// POST /api/processes/clear-cache - Limpar todo o cache
+router.post('/clear-cache', processController.clearAllCache);
+
+// POST /api/processes/refresh - Atualizar automaticamente (limpar cache e buscar dados atualizados)
+router.post('/refresh', processController.refreshData);
+
 module.exports = router; 
