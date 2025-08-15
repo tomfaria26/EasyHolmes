@@ -73,7 +73,7 @@ O backend é uma aplicação Node.js que será implantada como um serviço separ
         *   **Port**: `3000`
     *   Isso instrui o Coolify a fazer uma requisição para `http://<container>:3000/health` para verificar se a aplicação está respondendo.
 
-5.  **Deploy**:
+6.  **Deploy**:
     *   Salve as configurações e clique em **"Deploy"**. O Coolify irá clonar o repositório, construir a imagem Docker (agora com `curl` instalado) e iniciar o contêiner.
 
 ### 3.3. Configurando o Frontend (Vue.js + Nginx)
@@ -95,32 +95,33 @@ O frontend é uma aplicação Vue.js servida por um Nginx.
     *   A variável mais importante é a que diz ao Vue.js onde está a API. Como usaremos o proxy do Coolify, o caminho será relativo.
         *   `VUE_APP_API_URL`: `/api`
 
-### 3.4. Configuração de Rede e Proxy
+### 3.4. Configuração de Rede e Proxy (Coolify v4)
 
-Esta é a etapa crucial para conectar o frontend ao backend. Em vez de gerenciar um proxy reverso dentro do contêiner do Nginx, usaremos o proxy global do Coolify, que é mais poderoso e fácil de gerenciar.
+Esta é a etapa crucial para conectar o frontend ao backend. No Coolify v4, o proxy reverso é configurado diretamente no serviço que recebe o tráfego público (o frontend), em vez de em uma seção de proxy global.
 
 1.  **Acesse as Configurações de Rede do Frontend**:
-    *   Navegue até o serviço do `frontend` que você acabou de criar.
-    *   Vá para a aba **"Networking"**.
-    *   No campo **"FQDN (Fully Qualified Domain Name)"**, você verá o domínio principal gerado pelo Coolify para sua aplicação (ex: `http://<seu-dominio-gerado-pelo-coolify>`). Este será o endereço público do seu frontend.
+    *   Navegue até o serviço do `frontend` que você criou.
+    *   No menu do serviço, vá para a aba **"Networking"**.
 
-2.  **Configure o Proxy Global para a API**:
-    *   No menu lateral esquerdo do Coolify, vá para a seção **"Proxy"** do seu projeto.
-    *   Clique em **"Add New"** para adicionar uma nova rota de proxy.
-    *   Preencha os campos da seguinte forma:
+2.  **Configure o Domínio (FQDN)**:
+    *   Na seção **"FQDN (Fully Qualified Domain Name)"**, adicione o domínio principal para a sua aplicação (ex: `easyholmes.seu-dominio.com`) ou use o domínio temporário gerado pelo Coolify. Este será o endereço público do seu frontend.
+
+3.  **Configure o Proxy Reverso para a API**:
+    *   Ainda na aba **"Networking"**, role para baixo até encontrar a seção de **Proxy Reverso**.
+    *   Clique para adicionar uma nova rota de proxy e configure-a da seguinte forma:
         *   **Path**: `/api`
-          *   Isso significa que todo o tráfego que chegar no seu domínio principal com o caminho `/api` (ex: `http://<seu-dominio>/api/tasks`) será redirecionado.
+          *   Isso significa que todo o tráfego que chegar no seu domínio principal com o caminho `/api` (ex: `https://easyholmes.seu-dominio.com/api/tasks`) será redirecionado.
         *   **Target**: `http://<nome-do-serviço-backend>:3000`
-          *   Este é o alvo do redirecionamento. Use o nome exato do seu serviço de backend no Coolify (ex: `easyholmes-backend`). A URL completa deve ser `http://easyholmes-backend:3000`.
+          *   Este é o alvo do redirecionamento. Use o nome exato do seu serviço de backend no Coolify (ex: `easyholmes-backend`), seguido da porta. A URL completa deve ser `http://easyholmes-backend:3000`.
 
-    > **Como funciona?** Ao fazer isso, o Coolify intercepta todas as requisições para `/api` no seu domínio principal e as encaminha para o contêiner do backend na porta `3000`, exatamente como a API espera. O frontend (Vue.js) simplesmente faz chamadas para `/api/...` e o Coolify cuida do resto.
+    > **Como funciona?** Ao fazer isso, o Traefik (proxy reverso do Coolify) intercepta todas as requisições para o path `/api` no seu domínio e as encaminha para o contêiner do backend na porta `3000`. O frontend (Vue.js) simplesmente faz chamadas para `/api/...`, e o Coolify cuida do resto de forma transparente.
 
-5.  **Deploy**:
-    *   Salve as configurações e clique em **"Deploy"**.
+4.  **Deploy**:
+    *   Salve as configurações e clique em **"Deploy"** no serviço do frontend para aplicar as novas regras de rede.
 
-### 3.5. Configuração de Domínio e SSL
+### 4. Configuração de Domínio e SSL
 
-Depois que todos os serviços estiverem em execução, você pode configurar um domínio personalizado.
+Depois que todos os serviços estiverem em execução e o proxy configurado, você pode associar um domínio personalizado.
 
 1.  **Aponte seu DNS**:
     *   No seu provedor de domínio, crie um registro CNAME ou A apontando seu domínio (ex: `app.seusite.com`) para o endereço IP ou hostname do seu servidor Coolify.
@@ -133,6 +134,6 @@ Depois que todos os serviços estiverem em execução, você pode configurar um 
 3.  **Acesse sua Aplicação**:
     *   Após a propagação do DNS e a emissão do certificado, sua aplicação estará disponível em `https://app.seusite.com`.
 
-## 4. Conclusão
+## 5. Conclusão
 
-Seguindo estes passos, você terá a aplicação EasyHolmes implantada no Coolify de forma escalável e segura. A plataforma cuida da orquestração dos contêineres, redes, e certificados SSL, permitindo que você foque no desenvolvimento.
+Seguindo estes passos, você terá a aplicação EasyHolmes implantada no Coolify de forma escalável e segura. A plataforma cuida da orquestração dos contêineres, redes, proxy reverso e certificados SSL, permitindo que você foque no desenvolvimento.
