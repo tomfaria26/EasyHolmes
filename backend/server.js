@@ -31,6 +31,12 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Log para verificar se a requisição chega ao Express
+app.use((req, res, next) => {
+  console.log(`Requisição recebida: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Rotas básicas
 app.get('/', (req, res) => {
   res.json({
