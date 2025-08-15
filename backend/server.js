@@ -55,6 +55,7 @@ app.get('/health', (req, res) => {
 });
 
 // Rotas da API
+app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/processes', processRoutes);
 app.use('/api/tasks', taskRoutes);
