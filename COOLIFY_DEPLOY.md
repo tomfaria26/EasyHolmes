@@ -95,45 +95,75 @@ O frontend é uma aplicação Vue.js servida por um Nginx.
     *   A variável mais importante é a que diz ao Vue.js onde está a API. Como usaremos o proxy do Coolify, o caminho será relativo.
         *   `VUE_APP_API_URL`: `/api`
 
-### 3.4. Configuração de Rede e Proxy (Coolify v4)
+### 3.4. Configuração de Rede, Domínio e Proxy
 
-Esta é a etapa crucial para conectar o frontend ao backend. No Coolify v4, o proxy reverso é configurado diretamente no serviço que recebe o tráfego público (o frontend), em vez de em uma seção de proxy global.
+Esta é a etapa mais importante para expor sua aplicação à internet e permitir a comunicação entre o frontend e o backend.
 
-1.  **Acesse as Configurações de Rede do Frontend**:
-    *   Navegue até o serviço do `frontend` que você criou.
-    *   No menu do serviço, vá para a aba **"Networking"**.
+**O Coolify precisa de um domínio público (FQDN) para o frontend.** Usar um endereço IP privado (como `172.16.0.9`) **não funcionará**, pois ele não é acessível pela internet.
 
-2.  **Configure o Domínio (FQDN)**:
-    *   Na seção **"FQDN (Fully Qualified Domain Name)"**, adicione o domínio principal para a sua aplicação (ex: `easyholmes.seu-dominio.com`) ou use o domínio temporário gerado pelo Coolify. Este será o endereço público do seu frontend.
+Você tem duas opções para configurar o domínio:
 
-3.  **Configure o Proxy Reverso para a API**:
-    *   Ainda na aba **"Networking"**, role para baixo até encontrar a seção de **Proxy Reverso**.
-    *   Clique para adicionar uma nova rota de proxy e configure-a da seguinte forma:
-        *   **Path**: `/api`
-          *   Isso significa que todo o tráfego que chegar no seu domínio principal com o caminho `/api` (ex: `https://easyholmes.seu-dominio.com/api/tasks`) será redirecionado.
-        *   **Target**: `http://<nome-do-serviço-backend>:3000`
-          *   Este é o alvo do redirecionamento. Use o nome exato do seu serviço de backend no Coolify (ex: `easyholmes-backend`), seguido da porta. A URL completa deve ser `http://easyholmes-backend:3000`.
+---
 
-    > **Como funciona?** Ao fazer isso, o Traefik (proxy reverso do Coolify) intercepta todas as requisições para o path `/api` no seu domínio e as encaminha para o contêiner do backend na porta `3000`. O frontend (Vue.js) simplesmente faz chamadas para `/api/...`, e o Coolify cuida do resto de forma transparente.
+#### **Opção A: Usar um Domínio de Teste Gratuito (Recomendado para Iniciar)**
+
+O Coolify pode gerar um domínio público de teste para você. É a forma mais rápida de colocar sua aplicação no ar.
+
+1.  **Gere o Domínio Automático**:
+    *   Navegue até o serviço do **frontend**.
+    *   Vá para a aba **"General"**.
+    *   Na seção **"Domains"**, clique no botão **"Generate Domain"**. O Coolify criará um domínio para você com o final `.sslip.io`. Este domínio é público e resolve para o IP do seu servidor.
+
+2.  **Configure a URL da API no Frontend**:
+    *   Copie o domínio gerado (ex: `https://seu-servico-frontend.sslip.io`).
+    *   Vá para a aba **"Environment Variables"** do serviço de **frontend**.
+    *   Atualize a variável `VUE_APP_API_URL` para usar este domínio, adicionando o prefixo `/api`:
+        *   `VUE_APP_API_URL`: `https://seu-servico-frontend.sslip.io/api`
+
+3.  **Configure o Roteamento para o Backend**:
+    *   Navegue até o serviço do **backend**.
+    *   Vá para a aba **"General"**.
+    *   Na seção **"Domains"**, adicione o **mesmo domínio**, mas com o caminho `/api` no final:
+        *   `seu-servico-frontend.sslip.io/api`
 
 4.  **Deploy**:
-    *   Salve as configurações e clique em **"Deploy"** no serviço do frontend para aplicar as novas regras de rede.
+    *   Faça o deploy de **ambos os serviços** (frontend e backend) para aplicar as mudanças.
 
-### 4. Configuração de Domínio e SSL
+---
 
-Depois que todos os serviços estiverem em execução e o proxy configurado, você pode associar um domínio personalizado.
+#### **Opção B: Usar um Domínio Personalizado**
+
+Se você possui um domínio (ex: `app.seusite.com`), siga estes passos.
 
 1.  **Aponte seu DNS**:
-    *   No seu provedor de domínio, crie um registro CNAME ou A apontando seu domínio (ex: `app.seusite.com`) para o endereço IP ou hostname do seu servidor Coolify.
+    *   No painel de controle do seu provedor de domínio (GoDaddy, Cloudflare, etc.), crie um registro **DNS do tipo `A`**.
+    *   Aponte seu subdomínio (ex: `easyholmes`) para o **endereço IP público** do seu servidor Coolify.
 
 2.  **Configure o Domínio no Coolify**:
-    *   No serviço do **frontend**, vá para a aba **"Networking"**.
-    *   Adicione seu domínio no campo **"FQDN (Fully Qualified Domain Name)"**.
-    *   O Coolify automaticamente provisionará um certificado SSL/TLS gratuito usando Let's Encrypt.
+    *   Navegue até o serviço do **frontend**.
+    *   Vá para a aba **"General"**.
+    *   Na seção **"Domains"**, insira seu domínio completo: `easyholmes.seusite.com`.
 
-3.  **Acesse sua Aplicação**:
-    *   Após a propagação do DNS e a emissão do certificado, sua aplicação estará disponível em `https://app.seusite.com`.
+3.  **Configure a URL da API no Frontend**:
+    *   Vá para a aba **"Environment Variables"** do serviço de **frontend**.
+    *   Atualize a variável `VUE_APP_API_URL`:
+        *   `VUE_APP_API_URL`: `https://easyholmes.seusite.com/api`
 
-## 5. Conclusão
+4.  **Configure o Roteamento para o Backend**:
+    *   Navegue até o serviço do **backend**.
+    *   Vá para a aba **"General"**.
+    *   Na seção **"Domains"**, adicione o domínio com o caminho da API:
+        *   `easyholmes.seusite.com/api`
+
+5.  **Deploy e SSL**:
+    *   Faça o deploy de **ambos os serviços**.
+    *   O Coolify detectará o domínio e automaticamente provisionará um **certificado SSL gratuito** da Let's Encrypt.
+
+> **Como o proxy funciona?**
+> O Coolify utiliza um proxy reverso que direciona o tráfego com base no domínio e no caminho.
+> *   Requisições para `seu-dominio.com/` são enviadas para o contêiner do **frontend**.
+> *   Requisições para `seu-dominio.com/api/*` são enviadas para o contêiner do **backend**.
+
+## 4. Conclusão
 
 Seguindo estes passos, você terá a aplicação EasyHolmes implantada no Coolify de forma escalável e segura. A plataforma cuida da orquestração dos contêineres, redes, proxy reverso e certificados SSL, permitindo que você foque no desenvolvimento.
