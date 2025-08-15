@@ -6,6 +6,12 @@ const bcrypt = require('bcryptjs');
  */
 class User {
   constructor() {
+    console.log('DEBUG: process.env.DATABASE_URL =', process.env.DATABASE_URL);
+    console.log('DEBUG: process.env.DB_HOST =', process.env.DB_HOST);
+    console.log('DEBUG: process.env.DB_PORT =', process.env.DB_PORT);
+    console.log('DEBUG: process.env.DB_NAME =', process.env.DB_NAME);
+    console.log('DEBUG: process.env.DB_USER =', process.env.DB_USER);
+    console.log('DEBUG: process.env.DB_PASSWORD =', process.env.DB_PASSWORD ? '********' : undefined); // Mascara a senha
     // Lógica de configuração do pool de conexão
     if (process.env.DATABASE_URL) {
       this.pool = new Pool({
