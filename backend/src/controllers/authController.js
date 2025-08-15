@@ -13,11 +13,9 @@ class AuthController {
    * POST /api/auth/login
    */
   async login(req, res) {
-    console.log('Requisição recebida no AuthController.login');
     try {
       // Validar dados de entrada
       const errors = validationResult(req);
-      console.log('Corpo da requisição (req.body):', req.body);
       if (!errors.isEmpty()) {
         return res.status(400).json({
           error: 'Dados inválidos',
