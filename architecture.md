@@ -35,7 +35,7 @@ Esta arquitetura descreve o deploy do projeto EasyHolmes utilizando o Coolify co
 - **Frontend Service**:
     - Implantado como um serviço Docker no Coolify.
     - É uma aplicação web estática servida por um servidor Nginx.
-    - Acessa a API do backend através do domínio configurado no Coolify.
+    - Acessa a API do backend via proxy reverso configurado no Nginx do próprio frontend, eliminando a necessidade de uma variável de ambiente `VUE_APP_API_URL` para o frontend.
 - **PostgreSQL Database (Docker Compose)**:
     - Um serviço de banco de dados PostgreSQL que é implantado junto com o backend e o frontend como parte do mesmo Docker Compose.
     - O backend se conecta a este banco de dados usando as configurações de rede do Docker Compose.
