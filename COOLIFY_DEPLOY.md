@@ -65,8 +65,16 @@ O backend é uma aplicação Node.js que será implantada como um serviço separ
 
     > **Nota de Segurança**: Ao usar o nome do serviço (`DB_HOST`) para a conexão, você está utilizando a rede interna e segura do Coolify, evitando expor seu banco de dados à internet pública.
 
-4.  **Deploy**:
-    *   Salve as configurações e clique em **"Deploy"**. O Coolify irá clonar o repositório, construir a imagem Docker e iniciar o contêiner.
+4.  **Configure o Health Check**:
+    *   Para garantir que o Coolify possa monitorar corretamente o estado da sua aplicação, é crucial configurar um "health check". Isso evita que o serviço seja marcado como "Unhealthy".
+    *   Vá para a aba **"Health Check"** do seu serviço de backend.
+    *   Defina os seguintes valores:
+        *   **Path**: `/health`
+        *   **Port**: `3000`
+    *   Isso instrui o Coolify a fazer uma requisição para `http://<container>:3000/health` para verificar se a aplicação está respondendo.
+
+5.  **Deploy**:
+    *   Salve as configurações e clique em **"Deploy"**. O Coolify irá clonar o repositório, construir a imagem Docker (agora com `curl` instalado) e iniciar o contêiner.
 
 ### 3.3. Configurando o Frontend (Vue.js + Nginx)
 
