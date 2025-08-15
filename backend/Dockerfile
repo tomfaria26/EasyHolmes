@@ -35,6 +35,9 @@ RUN npm install --omit=dev
 # Copiar código fonte
 COPY . .
 
+# Instalar curl para o healthcheck do Coolify
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Mudar para usuário não-root
 USER nodejs
 
