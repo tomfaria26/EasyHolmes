@@ -54,11 +54,17 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rotas da API
+// Rotas da API (com e sem prefixo /api)
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
+
+app.use('/processes', processRoutes);  // Adicionar esta linha
 app.use('/api/processes', processRoutes);
+
+app.use('/tasks', taskRoutes);  // Adicionar esta linha
 app.use('/api/tasks', taskRoutes);
+
+app.use('/users', userRoutes);  // Adicionar esta linha
 app.use('/api/users', userRoutes);
 
 // Middleware de tratamento de erros
