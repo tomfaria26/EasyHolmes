@@ -6,13 +6,20 @@ const bcrypt = require('bcryptjs');
  */
 class User {
   constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'easyholmes',
-      user: process.env.DB_USER || 'easyholmes',
-      password: process.env.DB_PASSWORD || 'easyholmes123',
-    });
+    // Lógica de configuração do pool de conexão
+    if (process.env.DATABASE_URL) {
+      this.pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+    } else {
+      this.pool = new Pool({
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || 'easyholmes',
+        user: process.env.DB_USER || 'easyholmes',
+        password: process.env.DB_PASSWORD || 'easyholmes123',
+      });
+    }
     
     this.initDatabase();
   }
