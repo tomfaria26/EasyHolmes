@@ -9,8 +9,26 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - API_TOKEN=${API_TOKEN}
+      - DB_HOST=easyholmes-database
+      - DB_PORT=5432
+      - DB_NAME=easyholmes
+      - DB_USER=easyholmes
+      - DB_PASSWORD=easyholmes123
+    depends_on:
+      - database
+    networks:
+      - easyholmes-network
+    restart: unless-stopped
+
+  database:
+    image: postgres:15-alpine
+    container_name: easyholmes-database
+    environment:
+      - POSTGRES_DB=easyholmes
+      - POSTGRES_USER=easyholmes
+      - POSTGRES_PASSWORD=easyholmes123
     volumes:
-      - sqlite_data:/app/database
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - easyholmes-network
     restart: unless-stopped
@@ -21,8 +39,6 @@ services:
       dockerfile: Dockerfile
       target: production-stage
     container_name: easyholmes-frontend-prod
-    ports:
-      - "80:8080"
     depends_on:
       - backend
     networks:
@@ -31,6 +47,7 @@ services:
 
 volumes:
   sqlite_data:
+  postgres_data:
 
 networks:
   easyholmes-network:
