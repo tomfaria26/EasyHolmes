@@ -78,7 +78,7 @@ O backend é uma aplicação Node.js que será implantada como um serviço separ
 
 ### 3.3. Configurando o Frontend (Vue.js + Nginx)
 
-O frontend é uma aplicação Vue.js servida por um Nginx, que também atua como proxy reverso para o backend.
+O frontend é uma aplicação Vue.js servida por um Nginx.
 
 1.  **Crie um Novo Serviço**:
     *   Siga o mesmo processo do backend: **Applications** > **Add a new resource**.
@@ -90,32 +90,35 @@ O frontend é uma aplicação Vue.js servida por um Nginx, que também atua como
     *   **Base Directory**: Defina como `./frontend/`.
     *   **Port**: A porta exposta no `frontend/Dockerfile` é a `8080`.
 
-3.  **Configurando o Proxy Reverso para o Backend**:
-    *   O nosso `nginx.conf` está configurado para fazer proxy de `/api/` para `http://backend:3000/api/`. O Coolify não reconhecerá o nome do serviço `backend` diretamente. Precisamos usar as variáveis de ambiente que o Coolify provê.
-    *   No Coolify, cada serviço tem uma URL interna. A URL do nosso serviço de backend será algo como `http://<nome-do-serviço-backend>:<porta>`.
-    *   Para resolver isso, temos duas opções no Coolify:
-
-        **Opção A (Recomendada): Usar o Proxy do Coolify**
-        1.  No serviço do **frontend**, vá para a aba **"Networking"**.
-        2.  Desabilite a publicação da porta `8080` se não for necessária externamente.
-        3.  Em vez de usar o proxy do Nginx, configure o proxy diretamente no Coolify. Vá para a seção de **"Proxy"** do seu projeto.
-        4.  Configure o domínio principal (ex: `app.seusite.com`) para apontar para o serviço do **frontend**, na porta `8080`.
-        5.  Adicione uma rota de proxy para o backend:
-            *   **Path**: `/api`
-            *   **Target**: `http://<nome-do-serviço-backend>:3000`
-
-        **Opção B: Ajustar o `nginx.conf` (Menos flexível)**
-        1.  Você teria que modificar o `nginx.conf` para receber a URL do backend como uma variável de ambiente e usar `envsubst` no `CMD` do `frontend/Dockerfile` para substituí-la. Esta abordagem é mais complexa e menos recomendada.
-
-4.  **Variáveis de Ambiente para o Frontend**:
+3.  **Variáveis de Ambiente para o Frontend**:
     *   Vá para a aba **"Environment Variables"** do serviço de frontend.
-    *   A variável mais importante é a que diz ao Vue.js onde está a API.
-        *   `VUE_APP_API_URL`: `/api` (se usar a Opção A) ou a URL pública completa do seu backend.
+    *   A variável mais importante é a que diz ao Vue.js onde está a API. Como usaremos o proxy do Coolify, o caminho será relativo.
+        *   `VUE_APP_API_URL`: `/api`
+
+### 3.4. Configuração de Rede e Proxy
+
+Esta é a etapa crucial para conectar o frontend ao backend. Em vez de gerenciar um proxy reverso dentro do contêiner do Nginx, usaremos o proxy global do Coolify, que é mais poderoso e fácil de gerenciar.
+
+1.  **Acesse as Configurações de Rede do Frontend**:
+    *   Navegue até o serviço do `frontend` que você acabou de criar.
+    *   Vá para a aba **"Networking"**.
+    *   No campo **"FQDN (Fully Qualified Domain Name)"**, você verá o domínio principal gerado pelo Coolify para sua aplicação (ex: `http://<seu-dominio-gerado-pelo-coolify>`). Este será o endereço público do seu frontend.
+
+2.  **Configure o Proxy Global para a API**:
+    *   No menu lateral esquerdo do Coolify, vá para a seção **"Proxy"** do seu projeto.
+    *   Clique em **"Add New"** para adicionar uma nova rota de proxy.
+    *   Preencha os campos da seguinte forma:
+        *   **Path**: `/api`
+          *   Isso significa que todo o tráfego que chegar no seu domínio principal com o caminho `/api` (ex: `http://<seu-dominio>/api/tasks`) será redirecionado.
+        *   **Target**: `http://<nome-do-serviço-backend>:3000`
+          *   Este é o alvo do redirecionamento. Use o nome exato do seu serviço de backend no Coolify (ex: `easyholmes-backend`). A URL completa deve ser `http://easyholmes-backend:3000`.
+
+    > **Como funciona?** Ao fazer isso, o Coolify intercepta todas as requisições para `/api` no seu domínio principal e as encaminha para o contêiner do backend na porta `3000`, exatamente como a API espera. O frontend (Vue.js) simplesmente faz chamadas para `/api/...` e o Coolify cuida do resto.
 
 5.  **Deploy**:
     *   Salve as configurações e clique em **"Deploy"**.
 
-### 3.4. Configuração de Domínio e SSL
+### 3.5. Configuração de Domínio e SSL
 
 Depois que todos os serviços estiverem em execução, você pode configurar um domínio personalizado.
 
