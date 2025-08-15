@@ -37,12 +37,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: production-stage
     container_name: easyholmes-frontend-prod
     depends_on:
       - backend
     networks:
       - easyholmes-network
+    ports:
+      - "8080:8080"
     restart: unless-stopped
 
 volumes:
